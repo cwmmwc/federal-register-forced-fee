@@ -49,6 +49,7 @@ export DATABASE_URL="dbname=allotment_research user=your_user host=localhost"
 ## Running
 
 ```bash
+cd ~/Documents/UVA/UVa\ 2025-26/federal-register-app
 source venv/bin/activate
 python3 app.py
 ```
