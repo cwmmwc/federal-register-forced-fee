@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
     <h1>Forced Fee Patent Timeline</h1>
-    <p class="lead">Distribution of forced fee patents by year of patent signature, showing the impact of federal Indian land policy.</p>
+    <p class="lead">Distribution of forced fee patents by year issued, showing the impact of federal Indian land policy.</p>
 </div>
 
 <div class="card mb-4">
@@ -120,7 +120,7 @@ $(function() {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Claims with patents in this year',
+                    label: 'Fee patents issued in this year',
                     data: values,
                     backgroundColor: 'rgba(139, 90, 43, 0.7)',
                     borderColor: 'rgba(139, 90, 43, 1)',
@@ -134,17 +134,17 @@ $(function() {
                     tooltip: {
                         callbacks: {
                             title: function(items) { return 'Year: ' + items[0].label; },
-                            label: function(item) { return item.raw + ' claims'; }
+                            label: function(item) { return item.raw + ' fee patents'; }
                         }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'Number of Claims' }
+                        title: { display: true, text: 'Number of Fee Patents' }
                     },
                     x: {
-                        title: { display: true, text: 'Year of Patent Signature' }
+                        title: { display: true, text: 'Year Issued' }
                     }
                 }
             }

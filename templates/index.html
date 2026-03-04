@@ -26,7 +26,7 @@
                     <select class="form-select" id="tribeFilter">
                         <option value="">All Tribes</option>
                         {% for tribe_name, cnt in tribes %}
-                        <option value="{{ tribe_name }}">{{ tribe_name }} ({{ cnt }})</option>
+                        <option value="{{ tribe_name }}" data-slug="{{ slugify(tribe_name) }}">{{ tribe_name }} ({{ cnt }})</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -76,6 +76,34 @@
 {% block scripts %}
 <script>
 $(function() {
+    // Read filters from URL on page load
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('name')) $('#nameSearch').val(urlParams.get('name'));
+    if (urlParams.get('allotment')) $('#allotmentSearch').val(urlParams.get('allotment'));
+    if (urlParams.get('tribe')) $('#tribeFilter').val(urlParams.get('tribe'));
+    if (urlParams.get('claim_type')) $('#claimTypeFilter').val(urlParams.get('claim_type'));
+    if (urlParams.get('date_from')) $('#dateFrom').val(urlParams.get('date_from'));
+    if (urlParams.get('date_to')) $('#dateTo').val(urlParams.get('date_to'));
+
+    // Save filters to URL
+    function updateURL() {
+        var params = new URLSearchParams();
+        var fields = {
+            name: $('#nameSearch').val(),
+            allotment: $('#allotmentSearch').val(),
+            tribe: $('#tribeFilter').val(),
+            claim_type: $('#claimTypeFilter').val(),
+            date_from: $('#dateFrom').val(),
+            date_to: $('#dateTo').val()
+        };
+        for (var key in fields) {
+            if (fields[key]) params.set(key, fields[key]);
+        }
+        var qs = params.toString();
+        var newURL = window.location.pathname + (qs ? '?' + qs : '');
+        history.replaceState(null, '', newURL);
+    }
+
     var table = $('#claimsTable').DataTable({
         processing: true,
         serverSide: true,
@@ -132,16 +160,28 @@ $(function() {
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>rtip'
     });
 
-    $('#searchBtn').on('click', function() { table.ajax.reload(); });
+    $('#searchBtn').on('click', function() {
+        var tribe = $('#tribeFilter').val();
+        var hasOtherFilters = $('#nameSearch').val() || $('#allotmentSearch').val() ||
+            $('#claimTypeFilter').val() || $('#dateFrom').val() || $('#dateTo').val();
+        if (tribe && !hasOtherFilters) {
+            var slug = $('#tribeFilter option:selected').data('slug');
+            window.location = '/tribe/' + slug;
+            return;
+        }
+        updateURL();
+        table.ajax.reload();
+    });
 
     // Allow Enter key to trigger search
     $('#searchForm input').on('keypress', function(e) {
-        if (e.which === 13) { e.preventDefault(); table.ajax.reload(); }
+        if (e.which === 13) { e.preventDefault(); $('#searchBtn').click(); }
     });
 
     $('#clearBtn').on('click', function() {
         $('#nameSearch, #allotmentSearch, #dateFrom, #dateTo').val('');
         $('#tribeFilter, #claimTypeFilter').val('');
+        updateURL();
         table.ajax.reload();
     });
 

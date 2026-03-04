@@ -59,7 +59,7 @@
 {% if timeline_data %}
 <div class="card mb-4">
     <div class="card-header">
-        <h2 class="h5 mb-0">Claims by Year (Patent Signature Date)</h2>
+        <h2 class="h5 mb-0">Fee Patents by Year Issued</h2>
     </div>
     <div class="card-body">
         <canvas id="tribeTimeline" height="80"></canvas>
@@ -141,26 +141,34 @@ $(function() {
         type: 'bar',
         data: {
             labels: {{ timeline_data|map(attribute='yr')|list|tojson }},
-            datasets: [{
-                label: 'Claims',
-                data: {{ timeline_data|map(attribute='cnt')|list|tojson }},
-                backgroundColor: 'rgba(139, 90, 43, 0.7)',
-                borderColor: 'rgba(139, 90, 43, 1)',
-                borderWidth: 1
-            }]
+            datasets: [
+                {
+                    label: 'All Fee Patents',
+                    data: {{ timeline_data|map(attribute='total_patents')|list|tojson }},
+                    backgroundColor: 'rgba(139, 90, 43, 0.3)',
+                    borderColor: 'rgba(139, 90, 43, 0.6)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Linked to Federal Register Claims',
+                    data: {{ timeline_data|map(attribute='linked_to_claims')|list|tojson }},
+                    backgroundColor: 'rgba(178, 34, 34, 0.7)',
+                    borderColor: 'rgba(178, 34, 34, 1)',
+                    borderWidth: 1
+                }
+            ]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false }
+                legend: { display: true, position: 'top' }
             },
             scales: {
                 y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 }
+                    beginAtZero: true
                 },
                 x: {
-                    title: { display: true, text: 'Year' }
+                    title: { display: true, text: 'Year Issued' }
                 }
             }
         }

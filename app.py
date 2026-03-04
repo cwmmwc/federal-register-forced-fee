@@ -110,7 +110,7 @@ def index():
             ("RECOVER TITLE", "Recover Title"),
         ]
 
-        return render_template("index.html", tribes=tribes, claim_types=claim_types)
+        return render_template("index.html", tribes=tribes, claim_types=claim_types, slugify=slugify)
     finally:
         conn.close()
 
@@ -375,6 +375,30 @@ def claim_detail(claim_id):
                     """, (p["patents_glo_tribe"], p.get("fedreg_allotment", "")))
                     parcels.extend(cur.fetchall())
 
+        # If no patent linkages found (e.g. secretarial transfers),
+        # search fee_patents and trust_patents by allotment number + tribe
+        allotment_patents = []
+        if not patents and claim.get("allotment_number"):
+            tribe = claim["tribe_identified"]
+            allotment = claim["allotment_number"]
+            cur.execute("""
+                SELECT accession_number, signature_date, document_class,
+                       indian_allotment_number, tribe_normalized, state,
+                       acres, remarks, glo_url, 'fee' as patent_type
+                FROM fee_patents
+                WHERE indian_allotment_number = %s
+                  AND tribe_normalized = %s
+                UNION ALL
+                SELECT accession_number, signature_date, document_class,
+                       indian_allotment_number, tribe_normalized, state,
+                       acres, remarks, glo_url, 'trust' as patent_type
+                FROM trust_patents
+                WHERE indian_allotment_number = %s
+                  AND tribe_normalized = %s
+                ORDER BY signature_date
+            """, (allotment, tribe, allotment, tribe))
+            allotment_patents = cur.fetchall()
+
         # Get trust-to-fee linkages if we have fee accession numbers
         trust_links = []
         for p in patents:
@@ -389,6 +413,7 @@ def claim_detail(claim_id):
             "claim.html",
             claim=claim,
             patents=patents,
+            allotment_patents=allotment_patents,
             parcels=parcels,
             trust_links=trust_links,
             slugify=slugify,
@@ -432,20 +457,34 @@ def tribe_detail(tribe_slug):
         """, (tribe_name,))
         date_info = cur.fetchone()
 
-        # Timeline data (claims by year)
+        # Timeline data: all fee patents by year + subset linked to FR claims
         cur.execute("""
             SELECT
-                EXTRACT(YEAR FROM ffp.patents_signature_date)::int as yr,
-                COUNT(*) as cnt
-            FROM federal_register_claims fr
-            JOIN forced_fee_patents_rails ffp
-                ON LTRIM(fr.case_number, '0') = LTRIM(ffp.case_number, '0')
-                AND fr.allottee_name = ffp.fedreg_allottee
-            WHERE fr.tribe_identified = %s
-              AND ffp.patents_signature_date IS NOT NULL
-            GROUP BY yr
-            ORDER BY yr
-        """, (tribe_name,))
+                all_patents.yr,
+                all_patents.total as total_patents,
+                COALESCE(linked.linked_count, 0) as linked_to_claims
+            FROM (
+                SELECT EXTRACT(YEAR FROM signature_date::date)::int as yr,
+                       COUNT(*) as total
+                FROM fee_patents
+                WHERE tribe_normalized = %s
+                  AND signature_date IS NOT NULL AND signature_date != ''
+                GROUP BY yr
+            ) all_patents
+            LEFT JOIN (
+                SELECT
+                    EXTRACT(YEAR FROM ffp.patents_signature_date)::int as yr,
+                    COUNT(DISTINCT fr.id) as linked_count
+                FROM federal_register_claims fr
+                JOIN forced_fee_patents_rails ffp
+                    ON LTRIM(fr.case_number, '0') = LTRIM(ffp.case_number, '0')
+                    AND fr.allottee_name = ffp.fedreg_allottee
+                WHERE fr.tribe_identified = %s
+                  AND ffp.patents_signature_date IS NOT NULL
+                GROUP BY yr
+            ) linked ON all_patents.yr = linked.yr
+            ORDER BY all_patents.yr
+        """, (tribe_name, tribe_name))
         timeline_data = cur.fetchall()
 
         return render_template(

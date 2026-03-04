@@ -143,11 +143,60 @@
                 <h2 class="h5 mb-0">BLM Patent Linkage</h2>
             </div>
             <div class="card-body">
+                {% if allotment_patents %}
+                <p class="text-muted mb-3">
+                    No hand-verified patent linkage exists for this claim. The following patent records
+                    were found by matching allotment number {{ claim.allotment_number }} within
+                    {{ claim.tribe_identified }}.
+                </p>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Accession</th>
+                                <th>Date</th>
+                                <th>Class</th>
+                                <th>State</th>
+                                <th>Acres</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ap in allotment_patents %}
+                            <tr>
+                                <td>
+                                    {% if ap.patent_type == 'fee' %}
+                                    <span class="badge bg-warning text-dark">Fee</span>
+                                    {% else %}
+                                    <span class="badge bg-info">Trust</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set url = ap.glo_url or glo_url(ap.accession_number, ap.document_class) %}
+                                    {% if url %}
+                                    <a href="{{ url }}" target="_blank" class="glo-link">{{ ap.accession_number }}</a>
+                                    {% else %}
+                                    <span class="glo-link">{{ ap.accession_number }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ ap.signature_date or '—' }}</td>
+                                <td>{{ ap.document_class or '—' }}</td>
+                                <td>{{ ap.state or '—' }}</td>
+                                <td>{{ "%.2f"|format(ap.acres) if ap.acres else '—' }}</td>
+                                <td class="text-muted small">{{ linkify_remarks(ap.remarks)|safe if ap.remarks else '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
                 <p class="text-muted">
                     No BLM patent record has been linked to this claim yet. This claim appears in the
                     Federal Register but has not been matched to a General Land Office patent record
                     in the current dataset.
                 </p>
+                {% endif %}
             </div>
         </div>
         {% endif %}
