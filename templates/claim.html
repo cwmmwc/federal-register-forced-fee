@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}{{ claim.allottee_name }} — Case {{ claim.case_number }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Search</a></li>
+        <li class="breadcrumb-item">
+            <a href="{{ url_for('tribe_detail', tribe_slug=slugify(claim.tribe_identified)) }}">{{ claim.tribe_identified }}</a>
+        </li>
+        <li class="breadcrumb-item active">Case {{ claim.case_number }}</li>
+    </ol>
+</nav>
+
+<div class="page-header">
+    <h1>{{ claim.allottee_name }}</h1>
+    <p class="lead">
+        {{ claim.tribe_identified }} &middot;
+        Case {{ claim.case_number }} &middot;
+        Allotment {{ claim.allotment_number }}
+    </p>
+</div>
+
+<div class="row">
+    <!-- Federal Register Claim -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Federal Register Claim</h2>
+            </div>
+            <div class="card-body">
+                <dl class="claim-details">
+                    <dt>Allottee Name</dt>
+                    <dd>{{ claim.allottee_name }}</dd>
+
+                    <dt>Tribe</dt>
+                    <dd>
+                        <a href="{{ url_for('tribe_detail', tribe_slug=slugify(claim.tribe_identified)) }}">
+                            {{ claim.tribe_identified }}
+                        </a>
+                    </dd>
+
+                    <dt>BIA Agency Code</dt>
+                    <dd>{{ claim.bia_agency_code }}</dd>
+
+                    <dt>Case Number</dt>
+                    <dd>{{ claim.case_number }}</dd>
+
+                    <dt>Allotment Number</dt>
+                    <dd>{{ claim.allotment_number }}</dd>
+
+                    <dt>Type of Claim</dt>
+                    <dd>{{ claim.claim_type }}</dd>
+
+                    <dt>Document Source</dt>
+                    <dd>
+                        {% if claim.document_source == 'fedreg_1983_03_31' %}
+                            Federal Register, March 31, 1983
+                        {% elif claim.document_source == 'fedreg_1983_11_07' %}
+                            Federal Register, November 7, 1983
+                        {% else %}
+                            {{ claim.document_source or 'Unknown' }}
+                        {% endif %}
+                    </dd>
+
+                    {% if claim.publication_date %}
+                    <dt>Publication Date</dt>
+                    <dd>{{ claim.publication_date }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patent Linkages -->
+    <div class="col-lg-6 mb-4">
+        {% if patents %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h5 mb-0">
+                    Linked BLM Patent{{ 's' if patents|length > 1 }}
+                    <span class="badge bg-success">{{ patents|length }}</span>
+                </h2>
+            </div>
+            <div class="card-body">
+                {% for p in patents %}
+                <div class="patent-record {% if not loop.last %}mb-4 pb-3 border-bottom{% endif %}">
+                    <dl class="claim-details">
+                        <dt>GLO Patentee(s)</dt>
+                        <dd>{{ p.glo_patentees or '—' }}</dd>
+
+                        <dt>Accession Number</dt>
+                        <dd>
+                            {% if p.patents_accession_number %}
+                            {% set url = p.fee_glo_url or glo_url(p.patents_accession_number, p.patents_document_class) %}
+                            {% if url %}
+                            <a href="{{ url }}"
+                               target="_blank" class="glo-link">
+                                {{ p.patents_accession_number }}
+                            </a>
+                            {% else %}
+                            <span class="glo-link">{{ p.patents_accession_number }}</span>
+                            <span class="text-muted small">(not available on GLO site)</span>
+                            {% endif %}
+                            {% else %}—{% endif %}
+                        </dd>
+
+                        <dt>Signature Date</dt>
+                        <dd>{{ p.patents_signature_date or '—' }}</dd>
+
+                        <dt>Document Class</dt>
+                        <dd>{{ p.patents_document_class or '—' }}</dd>
+
+                        <dt>Authority</dt>
+                        <dd>{{ p.patents_authority_name or '—' }}</dd>
+
+                        <dt>State</dt>
+                        <dd>{{ p.patent_state or '—' }}</dd>
+
+                        {% if p.fee_acres %}
+                        <dt>Acres</dt>
+                        <dd>{{ "%.2f"|format(p.fee_acres) }}</dd>
+                        {% endif %}
+
+                        {% if p.patents_cancelled_doc == 'true' %}
+                        <dt>Status</dt>
+                        <dd><span class="badge bg-danger">Cancelled</span></dd>
+                        {% endif %}
+
+                        {% if p.patents_remarks %}
+                        <dt>Remarks</dt>
+                        <dd class="text-muted small">{{ linkify_remarks(p.patents_remarks)|safe }}</dd>
+                        {% endif %}
+
+                    </dl>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h5 mb-0">BLM Patent Linkage</h2>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    No BLM patent record has been linked to this claim yet. This claim appears in the
+                    Federal Register but has not been matched to a General Land Office patent record
+                    in the current dataset.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Trust-to-Fee Linkages -->
+{% if trust_links %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="h5 mb-0">Trust-to-Fee Patent Conversion</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Trust Patent</th>
+                        <th>Trust Date</th>
+                        <th>Trust Acres</th>
+                        <th>Fee Patent</th>
+                        <th>Fee Date</th>
+                        <th>Fee Acres</th>
+                        <th>Years to Conversion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tl in trust_links %}
+                    <tr>
+                        <td>
+                            <a href="{{ tl.trust_glo_url or glo_url(tl.trust_accession, 'Serial Land Patent') }}"
+                               target="_blank">{{ tl.trust_accession }}</a>
+                        </td>
+                        <td>{{ tl.trust_date or '—' }}</td>
+                        <td>{{ "%.2f"|format(tl.trust_acres) if tl.trust_acres else '—' }}</td>
+                        <td>
+                            <a href="{{ tl.fee_glo_url or glo_url(tl.fee_accession, 'Serial Land Patent') }}"
+                               target="_blank">{{ tl.fee_accession }}</a>
+                        </td>
+                        <td>{{ tl.fee_date or '—' }}</td>
+                        <td>{{ "%.2f"|format(tl.fee_acres) if tl.fee_acres else '—' }}</td>
+                        <td>
+                            {% if tl.years_to_conversion is not none %}
+                            {{ "%.1f"|format(tl.years_to_conversion) }} years
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Parcels / Legal Description -->
+{% if parcels %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="h5 mb-0">Land Description (PLSS)</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>County</th>
+                        <th>Meridian</th>
+                        <th>Township</th>
+                        <th>Range</th>
+                        <th>Section</th>
+                        <th>Aliquot Parts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pc in parcels %}
+                    <tr>
+                        <td>{{ pc.state or '—' }}</td>
+                        <td>{{ pc.county or '—' }}</td>
+                        <td>{{ pc.meridian or '—' }}</td>
+                        <td>{{ pc.township_number }}{{ pc.township_direction }}</td>
+                        <td>{{ pc.range_number }}{{ pc.range_direction }}</td>
+                        <td>{{ pc.section_number or '—' }}</td>
+                        <td>{{ pc.aliquot_parts or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

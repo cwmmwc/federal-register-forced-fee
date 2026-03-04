@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Tribes{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Tribes with Federal Register Claims</h1>
+    <p class="lead">{{ tribes|length }} tribes have forced fee patent claims in the 1983 Federal Register notices.</p>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover" id="tribesTable">
+        <thead>
+            <tr>
+                <th>Tribe</th>
+                <th>Claims</th>
+                <th>Patent Linkages</th>
+                <th>Earliest Patent</th>
+                <th>Latest Patent</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in tribes %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('tribe_detail', tribe_slug=slugify(t.tribe_identified)) }}">
+                        {{ t.tribe_identified }}
+                    </a>
+                </td>
+                <td>{{ t.claim_count }}</td>
+                <td>
+                    {% if t.patent_linkage_count > 0 %}
+                        {{ t.patent_linkage_count }}
+                    {% else %}
+                        <span class="text-muted">0</span>
+                    {% endif %}
+                </td>
+                <td>{{ t.earliest or '—' }}</td>
+                <td>{{ t.latest or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="fw-bold">
+                <td>Total</td>
+                <td>{{ tribes|sum(attribute='claim_count') }}</td>
+                <td>{{ tribes|sum(attribute='patent_linkage_count') }}</td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    $('#tribesTable').DataTable({
+        paging: false,
+        order: [[1, 'desc']],
+        language: { search: "Filter:" }
+    });
+});
+</script>
+{% endblock %}

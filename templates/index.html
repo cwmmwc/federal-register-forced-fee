@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Search Claims{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Federal Register Claims Search</h1>
+    <p class="lead">Search 10,976 claims published in the Federal Register on March 31 and November 7, 1983, including 9,649 forced fee patent claims and 1,327 secretarial transfers.</p>
+</div>
+
+<div class="card filter-card mb-4">
+    <div class="card-body">
+        <form id="searchForm">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="nameSearch" class="form-label">Allottee Name</label>
+                    <input type="text" class="form-control" id="nameSearch"
+                           placeholder="Search by name (partial match)">
+                </div>
+                <div class="col-md-2">
+                    <label for="allotmentSearch" class="form-label">Allotment #</label>
+                    <input type="text" class="form-control" id="allotmentSearch"
+                           placeholder="e.g. 314">
+                </div>
+                <div class="col-md-3">
+                    <label for="tribeFilter" class="form-label">Tribe</label>
+                    <select class="form-select" id="tribeFilter">
+                        <option value="">All Tribes</option>
+                        {% for tribe_name, cnt in tribes %}
+                        <option value="{{ tribe_name }}">{{ tribe_name }} ({{ cnt }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="claimTypeFilter" class="form-label">Claim Type</label>
+                    <select class="form-select" id="claimTypeFilter">
+                        <option value="">All Types</option>
+                        {% for value, label in claim_types %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-2">
+                    <label for="dateFrom" class="form-label">Patent Date From</label>
+                    <input type="date" class="form-control" id="dateFrom">
+                </div>
+                <div class="col-md-2">
+                    <label for="dateTo" class="form-label">Patent Date To</label>
+                    <input type="date" class="form-control" id="dateTo">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary me-2" id="searchBtn">Search</button>
+                    <button type="button" class="btn btn-outline-secondary me-2" id="clearBtn">Clear</button>
+                    <button type="button" class="btn btn-outline-dark" id="csvBtn">Download CSV</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<table id="claimsTable" class="table table-striped table-hover" style="width:100%">
+    <thead>
+        <tr>
+            <th>Case #</th>
+            <th>Allottee Name</th>
+            <th>Tribe</th>
+            <th>Allotment #</th>
+            <th>Claim Type</th>
+            <th>Patent Date</th>
+        </tr>
+    </thead>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    var table = $('#claimsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: '{{ url_for("api_search") }}',
+            data: function(d) {
+                d.name = $('#nameSearch').val();
+                d.allotment = $('#allotmentSearch').val();
+                d.tribe = $('#tribeFilter').val();
+                d.claim_type = $('#claimTypeFilter').val();
+                d.date_from = $('#dateFrom').val();
+                d.date_to = $('#dateTo').val();
+            }
+        },
+        columns: [
+            {
+                data: 'case_number',
+                render: function(data, type, row) {
+                    return '<a href="/claim/' + row.id + '">' + data + '</a>';
+                }
+            },
+            {
+                data: 'allottee_name',
+                render: function(data, type, row) {
+                    return '<a href="/claim/' + row.id + '">' + data + '</a>';
+                }
+            },
+            {
+                data: 'tribe',
+                render: function(data, type, row) {
+                    return '<a href="/tribe/' + row.tribe_slug + '">' + data + '</a>';
+                }
+            },
+            { data: 'allotment_number' },
+            { data: 'claim_type' },
+            {
+                data: 'patent_date',
+                render: function(data, type, row) {
+                    if (!data) return '<span class="text-muted">No match</span>';
+                    var label = data;
+                    if (row.patent_count > 1) label += ' <span class="badge bg-info">' + row.patent_count + ' patents</span>';
+                    return label;
+                }
+            }
+        ],
+        order: [[0, 'asc']],
+        pageLength: 25,
+        language: {
+            info: "Showing _START_ to _END_ of _TOTAL_ claims",
+            infoFiltered: "(filtered from _MAX_ total)",
+            search: "",
+            searchPlaceholder: "Quick search..."
+        },
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>rtip'
+    });
+
+    $('#searchBtn').on('click', function() { table.ajax.reload(); });
+
+    // Allow Enter key to trigger search
+    $('#searchForm input').on('keypress', function(e) {
+        if (e.which === 13) { e.preventDefault(); table.ajax.reload(); }
+    });
+
+    $('#clearBtn').on('click', function() {
+        $('#nameSearch, #allotmentSearch, #dateFrom, #dateTo').val('');
+        $('#tribeFilter, #claimTypeFilter').val('');
+        table.ajax.reload();
+    });
+
+    $('#csvBtn').on('click', function() {
+        var params = new URLSearchParams({
+            name: $('#nameSearch').val(),
+            allotment: $('#allotmentSearch').val(),
+            tribe: $('#tribeFilter').val(),
+            claim_type: $('#claimTypeFilter').val(),
+            date_from: $('#dateFrom').val(),
+            date_to: $('#dateTo').val()
+        });
+        window.location = '{{ url_for("api_search_csv") }}?' + params.toString();
+    });
+});
+</script>
+{% endblock %}

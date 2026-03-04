@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}About This Data{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>About This Data</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <section class="mb-5">
+            <h2>The Federal Register Notices</h2>
+            <p>
+                On March 31, 1983, and again on November 7, 1983, the Bureau of Indian Affairs published
+                notices in the <em>Federal Register</em> listing Indian allotment claims that had been
+                filed with the government. These notices were part of the BIA's attempt to inventory
+                allotments where fee patents had been issued without the allottee's consent — so-called
+                "forced fee patents."
+            </p>
+            <p>
+                The notices listed <strong>9,649 claims</strong> organized by BIA agency code,
+                identifying the allottee, allotment number, and case number for each claim.
+            </p>
+        </section>
+
+        <section class="mb-5">
+            <h2>What Is a "Forced Fee Patent"?</h2>
+            <p>
+                Under the General Allotment Act of 1887 (Dawes Act), tribal lands were divided into
+                individual allotments held in trust by the federal government for 25 years. During
+                the trust period, the land could not be sold or taxed.
+            </p>
+            <p>
+                A <strong>fee patent</strong> converted an allotment from trust status to fee simple
+                ownership, making it alienable (sellable) and taxable. A <strong>forced fee patent</strong>
+                was one issued <em>without the allottee's consent</em>, removing federal trust protections
+                whether or not the allottee wanted or understood the change.
+            </p>
+            <p>
+                The Burke Act of 1906 gave the Secretary of the Interior authority to issue fee
+                patents to "competent" allottees before the trust period expired. Beginning in 1907
+                and accelerating dramatically after Commissioner Cato Sells' 1917 "Declaration of Policy,"
+                the government issued thousands of forced fee patents, especially to allottees determined
+                to be of "less than half Indian blood."
+            </p>
+            <p>
+                The consequences were devastating. Once a fee patent was issued, the allottee owed
+                property taxes — often with no understanding that the change had occurred. Within
+                a few years, many allottees lost their land to tax sales, fraud, or sales under
+                economic duress. By some estimates, forced fee patenting caused the loss of millions
+                of acres of Indian land.
+            </p>
+        </section>
+
+        <section class="mb-5">
+            <h2>What This Dataset Shows — and What It Doesn't</h2>
+            <p>
+                The 9,649 claims in this dataset represent a <strong>floor, not a ceiling</strong>.
+                Only those allottees (or their descendants) who:
+            </p>
+            <ul>
+                <li>knew about the Federal Register notice,</li>
+                <li>understood the claims process,</li>
+                <li>had documentation of the forced fee patent,</li>
+                <li>trusted the federal government enough to participate, and</li>
+                <li>filed their claim before the deadline</li>
+            </ul>
+            <p>
+                appear in this dataset. The actual number of forced fee patents is certainly higher.
+            </p>
+            <p>
+                Of the 9,649 claims, approximately <strong>7,110</strong> have been linked to
+                at least one BLM patent record in the General Land Office database. The remaining
+                ~2,539 claims exist in the Federal Register but have not yet been matched to a
+                patent record, often due to inconsistent names, missing allotment numbers, or
+                other data quality issues.
+            </p>
+        </section>
+
+        <section class="mb-5">
+            <h2>Policy Eras Visible in the Data</h2>
+            <p>
+                The distribution of forced fee patents by year reflects the changing federal
+                policies toward Indian land:
+            </p>
+            <dl class="policy-eras">
+                <dt>1887 — General Allotment Act (Dawes Act)</dt>
+                <dd>Authorized allotment of tribal lands to individual Indians. Established the 25-year trust period.</dd>
+
+                <dt>1902 — Dead Indian Land Act</dt>
+                <dd>Allowed sale of inherited allotments, accelerating land transfer out of Indian ownership.</dd>
+
+                <dt>1906 — Burke Act</dt>
+                <dd>Gave the Secretary of the Interior power to declare allottees "competent" and issue fee patents before the trust period expired.</dd>
+
+                <dt>1907 — Declaration of Policy</dt>
+                <dd>Commissioner Francis Leupp began issuing forced fee patents under the Burke Act authority. The first wave of forced patenting.</dd>
+
+                <dt>1908 — The Spike</dt>
+                <dd>The data shows a dramatic spike in 1908, with over 1,100 claims dated to that year — the largest single year. This reflects the aggressive implementation of the forced patenting policy in its early phase.</dd>
+
+                <dt>1917–1920 — Sells Declaration and Competency Commissions</dt>
+                <dd>Commissioner Cato Sells declared all Indians of "less than half Indian blood" to be competent, issuing fee patents en masse. Competency commissions traveled to reservations, often issuing patents after cursory or no individual assessment.</dd>
+
+                <dt>1921 — Order of Restoration</dt>
+                <dd>Secretary Fall ordered a halt to forced patenting, though by then the damage was largely done.</dd>
+
+                <dt>1934 — Indian Reorganization Act</dt>
+                <dd>Ended the allotment policy and attempted to restore tribal self-governance and land holdings.</dd>
+            </dl>
+        </section>
+
+        <section class="mb-5">
+            <h2>Data Sources</h2>
+            <ul>
+                <li><strong>Federal Register claims:</strong> Digitized from the March 31, 1983 and November 7, 1983 Federal Register notices</li>
+                <li><strong>BLM patent records:</strong> Bureau of Land Management General Land Office Records, accessed via <a href="https://glorecords.blm.gov/" target="_blank">glorecords.blm.gov</a></li>
+                <li><strong>Patent-to-claim linkages:</strong> Hand-verified matching between Federal Register claims and GLO patent records</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>More Information</h2>
+            <p>
+                This data is part of the
+                <a href="https://land-sales.iath.virginia.edu/">Indian Land Allotment Research</a>
+                project at the
+                <a href="https://iath.virginia.edu/">Institute for Advanced Technology in the Humanities</a>,
+                University of Virginia.
+            </p>
+        </section>
+    </div>
+</div>
+{% endblock %}

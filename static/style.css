@@ -1,0 +1,258 @@
+/* ─── Color Palette ─── */
+:root {
+    --brand-dark: #2c1810;
+    --brand-medium: #5c3a21;
+    --brand-warm: #8b5a2b;
+    --brand-tan: #c4a57b;
+    --brand-cream: #f5f0e8;
+    --brand-light: #faf8f4;
+    --text-primary: #2c2c2c;
+    --text-secondary: #5a5a5a;
+    --link-color: #6b3a1f;
+    --link-hover: #8b5a2b;
+}
+
+/* ─── Base ─── */
+body {
+    font-family: "Georgia", "Times New Roman", serif;
+    color: var(--text-primary);
+    background-color: var(--brand-light);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar-brand,
+.stat-number {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+a:hover {
+    color: var(--link-hover);
+    text-decoration: underline;
+}
+
+/* ─── Navbar ─── */
+.navbar {
+    background-color: var(--brand-dark);
+    border-bottom: 3px solid var(--brand-warm);
+    padding: 0.6rem 0;
+}
+.navbar-brand {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.nav-link {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+}
+
+/* ─── Page Header ─── */
+.page-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--brand-tan);
+}
+.page-header h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--brand-dark);
+    margin-bottom: 0.25rem;
+}
+.page-header .lead {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+/* ─── Cards ─── */
+.card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.card-header {
+    background-color: var(--brand-cream);
+    border-bottom: 1px solid #ddd;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.filter-card {
+    background-color: var(--brand-cream);
+}
+
+/* ─── Stat Cards ─── */
+.stat-card {
+    text-align: center;
+}
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--brand-medium);
+    line-height: 1.2;
+}
+.stat-label {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* ─── Claim Detail ─── */
+.claim-details {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 0.35rem 1rem;
+    margin-bottom: 0;
+}
+.claim-details dt {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    padding-top: 2px;
+}
+.claim-details dd {
+    margin-bottom: 0;
+}
+
+/* ─── Policy Eras ─── */
+.policy-eras dt {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--brand-medium);
+    font-size: 0.95rem;
+    margin-top: 1rem;
+}
+.policy-eras dt:first-child {
+    margin-top: 0;
+}
+.policy-eras dd {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+/* ─── Tables ─── */
+.table {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.88rem;
+}
+.table thead th {
+    background-color: var(--brand-cream);
+    border-bottom: 2px solid var(--brand-tan);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+
+/* ─── DataTables Overrides ─── */
+.dataTables_wrapper .dataTables_processing {
+    background: var(--brand-cream);
+    border: 1px solid var(--brand-tan);
+}
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* ─── Badges ─── */
+.badge.bg-success {
+    background-color: #3d7a4a !important;
+}
+.badge.bg-info {
+    background-color: var(--brand-warm) !important;
+    color: #fff !important;
+}
+.badge.bg-secondary {
+    background-color: #999 !important;
+}
+.badge.bg-danger {
+    background-color: #a33 !important;
+}
+
+/* ─── GLO Link ─── */
+.glo-link {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.9rem;
+}
+
+/* ─── Buttons ─── */
+.btn-primary {
+    background-color: var(--brand-medium);
+    border-color: var(--brand-medium);
+}
+.btn-primary:hover {
+    background-color: var(--brand-dark);
+    border-color: var(--brand-dark);
+}
+.btn-outline-dark {
+    color: var(--brand-medium);
+    border-color: var(--brand-medium);
+}
+.btn-outline-dark:hover {
+    background-color: var(--brand-medium);
+    color: #fff;
+}
+
+/* ─── Form Controls ─── */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--brand-tan);
+    box-shadow: 0 0 0 0.2rem rgba(139, 90, 43, 0.2);
+}
+.form-label {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+}
+
+/* ─── Breadcrumbs ─── */
+.breadcrumb {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 0.5rem;
+}
+
+/* ─── Footer ─── */
+footer {
+    background-color: var(--brand-cream);
+    border-top: 1px solid var(--brand-tan);
+    padding: 1.5rem 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+footer a {
+    color: var(--brand-medium);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 1.4rem;
+    }
+    .claim-details {
+        grid-template-columns: 120px 1fr;
+    }
+    .stat-number {
+        font-size: 1.4rem;
+    }
+}
