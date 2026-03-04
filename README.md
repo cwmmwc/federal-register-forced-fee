@@ -2,7 +2,7 @@
 
 A Flask application for searching and browsing forced fee patent claims and secretarial transfers published in the Federal Register on March 31 and November 7, 1983. Built to replace the PHP search interface at [land-sales.iath.virginia.edu](https://land-sales.iath.virginia.edu/).
 
-Part of the [Indian Land Allotment Research](https://land-sales.iath.virginia.edu/) project at the [Institute for Advanced Technology in the Humanities](https://iath.virginia.edu/), University of Virginia.
+Part of the [Indian Land Allotment Research](https://land-sales.iath.virginia.edu/) project at the [Institute for Advanced Technology in the Humanities](https://www.iath.virginia.edu/), University of Virginia.
 
 ## The Data
 
