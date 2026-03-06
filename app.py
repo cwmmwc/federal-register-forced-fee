@@ -415,6 +415,19 @@ def claim_detail(claim_id):
                 """, (p["patents_accession_number"],))
                 trust_links.extend(cur.fetchall())
 
+        # Look up BLM patent objectids for cross-linking
+        blm_patent_ids = {}
+        for p in patents:
+            acc = p.get("patents_accession_number")
+            if acc:
+                cur.execute("""
+                    SELECT objectid FROM blm_allotment_patents
+                    WHERE accession_number = %s LIMIT 1
+                """, (acc,))
+                row = cur.fetchone()
+                if row:
+                    blm_patent_ids[acc] = row["objectid"]
+
         return render_template(
             "claim.html",
             claim=claim,
@@ -422,6 +435,7 @@ def claim_detail(claim_id):
             allotment_patents=allotment_patents,
             parcels=parcels,
             trust_links=trust_links,
+            blm_patent_ids=blm_patent_ids,
             slugify=slugify,
             glo_url=glo_url,
             linkify_remarks=linkify_remarks,
@@ -748,6 +762,327 @@ def api_timeline():
         data = cur.fetchall()
 
         return jsonify([{"year": r["yr"], "count": r["claim_count"]} for r in data])
+    finally:
+        conn.close()
+
+
+@app.route("/patents")
+def patents_index():
+    """Browse / search all BLM allotment patents."""
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT preferred_name FROM blm_allotment_patents WHERE preferred_name IS NOT NULL ORDER BY preferred_name")
+        tribes = [r[0] for r in cur.fetchall()]
+        cur.execute("SELECT DISTINCT state FROM blm_allotment_patents WHERE state IS NOT NULL ORDER BY state")
+        states = [r[0] for r in cur.fetchall()]
+        return render_template("patents.html", tribes=tribes, states=states)
+    finally:
+        conn.close()
+
+
+FEE_AUTHORITIES = (
+    'Indian Fee Patent', 'Indian Fee Patent (Heir)', 'Indian Fee Patent (IRA)',
+    'Indian Fee Patent (Non-IRA)', 'Indian Fee Patent-Misc.',
+    'Indian Fee Patent-Term or Non', 'Indian Homestead Fee Patent',
+    'Indian Trust to Fee',
+)
+
+TRUST_AUTHORITIES = (
+    'Indian Trust Patent', 'Indian Trust Patent (Wind R)',
+    'Indian Homestead Trust', 'Indian Reissue Trust',
+    'Indian Allotment - General', 'Indian Allotment in Nat. Forest',
+    'Indian Allotment-Wyandotte', 'Indian Partition',
+)
+
+
+@app.route("/api/patents")
+def api_patents():
+    """JSON API for patent search (DataTables server-side)."""
+    conn = get_db()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        draw = request.args.get("draw", 1, type=int)
+        start = request.args.get("start", 0, type=int)
+        length = request.args.get("length", 25, type=int)
+
+        name_search = request.args.get("name", "").strip()
+        allotment = request.args.get("allotment", "").strip()
+        tribe = request.args.get("tribe", "").strip()
+        state = request.args.get("state", "").strip()
+        patent_type = request.args.get("patent_type", "").strip()
+        date_from = request.args.get("date_from", "").strip()
+        date_to = request.args.get("date_to", "").strip()
+
+        order_col_idx = request.args.get("order[0][column]", 0, type=int)
+        order_dir = request.args.get("order[0][dir]", "asc")
+        order_cols = ["full_name", "preferred_name", "state",
+                      "indian_allotment_number", "authority", "signature_date", "forced_fee"]
+        order_col = order_cols[min(order_col_idx, len(order_cols) - 1)]
+        if order_dir not in ("asc", "desc"):
+            order_dir = "asc"
+
+        conditions = []
+        params = []
+
+        if name_search:
+            conditions.append("full_name ILIKE %s")
+            params.append(f"%{name_search}%")
+        if allotment:
+            conditions.append("indian_allotment_number = %s")
+            params.append(allotment)
+        if tribe:
+            conditions.append("preferred_name = %s")
+            params.append(tribe)
+        if state:
+            conditions.append("state = %s")
+            params.append(state)
+        if patent_type == "fee":
+            conditions.append("authority IN %s")
+            params.append(FEE_AUTHORITIES)
+        elif patent_type == "trust":
+            conditions.append("authority IN %s")
+            params.append(TRUST_AUTHORITIES)
+        elif patent_type == "forced":
+            conditions.append("forced_fee = 'True'")
+        if date_from:
+            conditions.append("signature_date >= %s")
+            params.append(date_from)
+        if date_to:
+            conditions.append("signature_date <= %s")
+            params.append(date_to)
+
+        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+        cur.execute("SELECT COUNT(*) as cnt FROM blm_allotment_patents")
+        total = cur.fetchone()["cnt"]
+
+        cur.execute(f"SELECT COUNT(*) as cnt FROM blm_allotment_patents {where}", params)
+        filtered = cur.fetchone()["cnt"]
+
+        cur.execute(f"""
+            SELECT objectid, full_name, preferred_name, state,
+                   indian_allotment_number, authority, signature_date, forced_fee
+            FROM blm_allotment_patents
+            {where}
+            ORDER BY {order_col} {order_dir} NULLS LAST
+            LIMIT %s OFFSET %s
+        """, params + [length, start])
+        rows = cur.fetchall()
+
+        data = []
+        for r in rows:
+            sig_date = ""
+            if r["signature_date"]:
+                sig_date = r["signature_date"].strftime("%Y-%m-%d") if hasattr(r["signature_date"], "strftime") else str(r["signature_date"])
+            data.append({
+                "objectid": r["objectid"],
+                "full_name": r["full_name"] or "",
+                "preferred_name": r["preferred_name"] or "",
+                "state": r["state"] or "",
+                "allotment_number": r["indian_allotment_number"] or "",
+                "authority": r["authority"] or "",
+                "signature_date": sig_date,
+                "forced_fee": r["forced_fee"] == "True",
+            })
+
+        return jsonify({
+            "draw": draw,
+            "recordsTotal": total,
+            "recordsFiltered": filtered,
+            "data": data,
+        })
+    finally:
+        conn.close()
+
+
+@app.route("/api/patents/csv")
+def api_patents_csv():
+    """CSV download of patent search results."""
+    conn = get_db()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        name_search = request.args.get("name", "").strip()
+        allotment = request.args.get("allotment", "").strip()
+        tribe = request.args.get("tribe", "").strip()
+        state = request.args.get("state", "").strip()
+        patent_type = request.args.get("patent_type", "").strip()
+        date_from = request.args.get("date_from", "").strip()
+        date_to = request.args.get("date_to", "").strip()
+
+        conditions = []
+        params = []
+
+        if name_search:
+            conditions.append("full_name ILIKE %s")
+            params.append(f"%{name_search}%")
+        if allotment:
+            conditions.append("indian_allotment_number = %s")
+            params.append(allotment)
+        if tribe:
+            conditions.append("preferred_name = %s")
+            params.append(tribe)
+        if state:
+            conditions.append("state = %s")
+            params.append(state)
+        if patent_type == "fee":
+            conditions.append("authority IN %s")
+            params.append(FEE_AUTHORITIES)
+        elif patent_type == "trust":
+            conditions.append("authority IN %s")
+            params.append(TRUST_AUTHORITIES)
+        elif patent_type == "forced":
+            conditions.append("forced_fee = 'True'")
+        if date_from:
+            conditions.append("signature_date >= %s")
+            params.append(date_from)
+        if date_to:
+            conditions.append("signature_date <= %s")
+            params.append(date_to)
+
+        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+        cur.execute(f"""
+            SELECT accession_number, full_name, preferred_name, state, county,
+                   indian_allotment_number, authority, signature_date, forced_fee,
+                   meridian, township_number, township_direction,
+                   range_number, range_direction, section_number, aliquot_parts, remarks
+            FROM blm_allotment_patents
+            {where}
+            ORDER BY preferred_name, full_name
+        """, params)
+        rows = cur.fetchall()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "Accession Number", "Full Name", "Tribe", "State", "County",
+            "Allotment Number", "Authority", "Signature Date", "Forced Fee",
+            "Meridian", "Township", "Township Dir", "Range", "Range Dir",
+            "Section", "Aliquot Parts", "Remarks"
+        ])
+        for r in rows:
+            sig_date = ""
+            if r["signature_date"]:
+                sig_date = r["signature_date"].strftime("%Y-%m-%d") if hasattr(r["signature_date"], "strftime") else str(r["signature_date"])
+            writer.writerow([
+                r["accession_number"], r["full_name"], r["preferred_name"],
+                r["state"], r["county"], r["indian_allotment_number"],
+                r["authority"], sig_date, r["forced_fee"],
+                r["meridian"], r["township_number"], r["township_direction"],
+                r["range_number"], r["range_direction"], r["section_number"],
+                r["aliquot_parts"], r["remarks"],
+            ])
+
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=blm_allotment_patents.csv"}
+        )
+    finally:
+        conn.close()
+
+
+@app.route("/patent/<int:objectid>")
+def patent_detail(objectid):
+    """Individual BLM patent record page."""
+    conn = get_db()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        cur.execute("SELECT * FROM blm_allotment_patents WHERE objectid = %s", (objectid,))
+        patent = cur.fetchone()
+        if not patent:
+            abort(404)
+
+        # Cross-link: check if this patent's accession_number is in forced_fee_patents_rails
+        linked_claim = None
+        if patent.get("accession_number"):
+            cur.execute("""
+                SELECT fr.id, fr.allottee_name, fr.case_number, fr.tribe_identified
+                FROM forced_fee_patents_rails ffp
+                JOIN federal_register_claims fr
+                    ON LTRIM(fr.case_number, '0') = LTRIM(ffp.case_number, '0')
+                    AND fr.allottee_name = ffp.fedreg_allottee
+                WHERE ffp.patents_accession_number = %s
+                LIMIT 1
+            """, (patent["accession_number"],))
+            linked_claim = cur.fetchone()
+
+        return render_template(
+            "patent.html",
+            patent=patent,
+            linked_claim=linked_claim,
+            glo_url=glo_url,
+            slugify=slugify,
+        )
+    finally:
+        conn.close()
+
+
+@app.route("/patents/timeline")
+def patents_timeline():
+    """Timeline of all fee patents from BLM dataset."""
+    conn = get_db()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        cur.execute("SELECT DISTINCT preferred_name FROM blm_allotment_patents WHERE preferred_name IS NOT NULL ORDER BY preferred_name")
+        tribes = [r["preferred_name"] for r in cur.fetchall()]
+
+        cur.execute(f"""
+            SELECT
+                EXTRACT(YEAR FROM signature_date)::int as yr,
+                COUNT(*) FILTER (WHERE authority IN {FEE_AUTHORITIES!r}) as fee_count,
+                COUNT(*) FILTER (WHERE authority IN {TRUST_AUTHORITIES!r}) as trust_count,
+                COUNT(*) FILTER (WHERE authority NOT IN {FEE_AUTHORITIES!r} AND authority NOT IN {TRUST_AUTHORITIES!r}) as other_count,
+                COUNT(*) FILTER (WHERE forced_fee = 'True') as forced_count
+            FROM blm_allotment_patents
+            WHERE signature_date IS NOT NULL
+            GROUP BY yr
+            ORDER BY yr
+        """)
+        timeline_data = cur.fetchall()
+
+        return render_template("patents_timeline.html", tribes=tribes, timeline_data=timeline_data)
+    finally:
+        conn.close()
+
+
+@app.route("/api/patents/timeline")
+def api_patents_timeline():
+    """JSON API for patent timeline, optionally filtered by tribe."""
+    tribe = request.args.get("tribe", "").strip()
+
+    conn = get_db()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        conditions = ["signature_date IS NOT NULL"]
+        params = []
+        if tribe:
+            conditions.append("preferred_name = %s")
+            params.append(tribe)
+
+        where = "WHERE " + " AND ".join(conditions)
+
+        cur.execute(f"""
+            SELECT
+                EXTRACT(YEAR FROM signature_date)::int as yr,
+                COUNT(*) FILTER (WHERE authority IN {FEE_AUTHORITIES!r}) as fee_count,
+                COUNT(*) FILTER (WHERE authority IN {TRUST_AUTHORITIES!r}) as trust_count,
+                COUNT(*) FILTER (WHERE authority NOT IN {FEE_AUTHORITIES!r} AND authority NOT IN {TRUST_AUTHORITIES!r}) as other_count,
+                COUNT(*) FILTER (WHERE forced_fee = 'True') as forced_count
+            FROM blm_allotment_patents
+            {where}
+            GROUP BY yr
+            ORDER BY yr
+        """, params)
+        data = cur.fetchall()
+
+        return jsonify([{"year": r["yr"], "fee": r["fee_count"], "trust": r["trust_count"], "other": r["other_count"], "forced": r.get("forced_count", 0)} for r in data])
     finally:
         conn.close()
 

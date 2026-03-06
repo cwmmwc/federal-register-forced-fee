@@ -21,13 +21,20 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">Search</a>
+                        <a class="nav-link" href="{{ url_for('index') }}">Claims</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('patents_index') }}">Patents</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('tribes_list') }}">Tribes</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('timeline') }}">Timeline</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Timeline</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('timeline') }}">Forced Fee Claims</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('patents_timeline') }}">All Patents</a></li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('about') }}">About</a>

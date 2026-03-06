@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Patent Timeline{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>All Patent Timeline</h1>
+    <p class="lead">Distribution of all 239,845 BLM allotment patents by year issued, showing fee patents vs. trust patents.</p>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center mb-3">
+            <div class="col-md-4">
+                <label for="timelineTribe" class="form-label">Filter by Tribe</label>
+                <select class="form-select" id="timelineTribe">
+                    <option value="">All Tribes</option>
+                    {% for t in tribes %}
+                    <option value="{{ t }}">{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-3">
+                <button class="btn btn-primary" id="updateTimeline">Update</button>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="showForced">
+                    <label class="form-check-label" for="showForced">Show forced fee</label>
+                </div>
+            </div>
+        </div>
+        <canvas id="mainTimeline" height="100"></canvas>
+    </div>
+</div>
+
+<!-- Policy Era Key -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="h5 mb-0">Policy Era Context</h2>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <dl class="policy-eras">
+                    <dt>1887 — General Allotment Act (Dawes Act)</dt>
+                    <dd>Authorized the President to survey and allot tribal lands to individual Indians, breaking up communal landholding.</dd>
+
+                    <dt>1902 — Dead Indian Land Act</dt>
+                    <dd>Allowed sale of inherited allotments, accelerating land loss.</dd>
+
+                    <dt>1906 — Burke Act</dt>
+                    <dd>Gave the Secretary of the Interior authority to issue fee patents to "competent" allottees before the end of the 25-year trust period, removing federal trust protections.</dd>
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <dl class="policy-eras">
+                    <dt>1907 — Declaration of Policy</dt>
+                    <dd>Beginning of forced patenting under Commissioner Francis Leupp.</dd>
+
+                    <dt>1917 — Sells Declaration / Competency Commissions</dt>
+                    <dd>Commissioner Cato Sells declared all Indians of half or less Indian blood "competent," issuing fee patents without consent. Competency commissions traveled to reservations to assess allottees.</dd>
+
+                    <dt>1920 — Order of Restoration</dt>
+                    <dd>Secretary of the Interior John Barton Payne's order to stop forced patenting, though damage was largely done.</dd>
+
+                    <dt>1934 — Indian Reorganization Act</dt>
+                    <dd>Ended allotment and attempted to restore tribal self-governance.</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    var policyMarkers = [
+        { year: 1887, label: 'Dawes Act', color: '#8B4513' },
+        { year: 1902, label: 'Dead Indian Land Act', color: '#A0522D' },
+        { year: 1906, label: 'Burke Act', color: '#CD853F' },
+        { year: 1907, label: 'Declaration of Policy', color: '#D2691E' },
+        { year: 1917, label: 'Sells Declaration', color: '#B22222' },
+        { year: 1920, label: 'Order of Restoration', color: '#2E8B57' },
+        { year: 1934, label: 'Indian Reorganization Act', color: '#4682B4' }
+    ];
+
+    var initialData = {{ timeline_data|tojson }};
+    var currentData = initialData;
+    var chart;
+
+    function buildChart(data, showForced) {
+        var labels = data.map(function(d) { return d.yr || d.year; });
+        var trustValues = data.map(function(d) { return d.trust_count || d.trust || 0; });
+        var otherValues = data.map(function(d) { return d.other_count || d.other || 0; });
+
+        var datasets;
+        if (showForced) {
+            var forcedValues = data.map(function(d) { return d.forced_count || d.forced || 0; });
+            var voluntaryFee = data.map(function(d) {
+                var fee = d.fee_count || d.fee || 0;
+                var forced = d.forced_count || d.forced || 0;
+                return fee - forced;
+            });
+            datasets = [
+                {
+                    label: 'Forced fee patents',
+                    data: forcedValues,
+                    backgroundColor: 'rgba(255, 140, 0, 0.9)',
+                    borderColor: 'rgba(255, 140, 0, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Other fee patents',
+                    data: voluntaryFee,
+                    backgroundColor: 'rgba(178, 34, 34, 0.7)',
+                    borderColor: 'rgba(178, 34, 34, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Trust patents',
+                    data: trustValues,
+                    backgroundColor: 'rgba(70, 130, 180, 0.7)',
+                    borderColor: 'rgba(70, 130, 180, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Other',
+                    data: otherValues,
+                    backgroundColor: 'rgba(139, 90, 43, 0.4)',
+                    borderColor: 'rgba(139, 90, 43, 1)',
+                    borderWidth: 1
+                }
+            ];
+        } else {
+            var feeValues = data.map(function(d) { return d.fee_count || d.fee || 0; });
+            datasets = [
+                {
+                    label: 'Fee patents',
+                    data: feeValues,
+                    backgroundColor: 'rgba(178, 34, 34, 0.8)',
+                    borderColor: 'rgba(178, 34, 34, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Trust patents',
+                    data: trustValues,
+                    backgroundColor: 'rgba(70, 130, 180, 0.7)',
+                    borderColor: 'rgba(70, 130, 180, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Other',
+                    data: otherValues,
+                    backgroundColor: 'rgba(139, 90, 43, 0.4)',
+                    borderColor: 'rgba(139, 90, 43, 1)',
+                    borderWidth: 1
+                }
+            ];
+        }
+
+        if (chart) chart.destroy();
+
+        var ctx = document.getElementById('mainTimeline').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) { return 'Year: ' + items[0].label; }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        stacked: true,
+                        title: { display: true, text: 'Number of Patents' }
+                    },
+                    x: {
+                        stacked: true,
+                        title: { display: true, text: 'Year Issued' }
+                    }
+                }
+            }
+        });
+    }
+
+    buildChart(currentData, false);
+
+    $('#showForced').on('change', function() {
+        buildChart(currentData, $(this).is(':checked'));
+    });
+
+    $('#updateTimeline').on('click', function() {
+        var tribe = $('#timelineTribe').val();
+        $.getJSON('{{ url_for("api_patents_timeline") }}', { tribe: tribe }, function(data) {
+            currentData = data;
+            buildChart(data, $('#showForced').is(':checked'));
+        });
+    });
+});
+</script>
+{% endblock %}

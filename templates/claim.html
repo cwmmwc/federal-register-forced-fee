@@ -108,6 +108,10 @@
                             <span class="glo-link">{{ p.patents_accession_number }}</span>
                             <span class="text-muted small">(not available on GLO site)</span>
                             {% endif %}
+                            {% if blm_patent_ids and p.patents_accession_number in blm_patent_ids %}
+                            &middot;
+                            <a href="{{ url_for('patent_detail', objectid=blm_patent_ids[p.patents_accession_number]) }}" class="small">View full BLM record</a>
+                            {% endif %}
                             {% else %}—{% endif %}
                         </dd>
 

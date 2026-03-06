@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ patent.full_name }} — Patent {{ patent.accession_number }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('patents_index') }}">Patents</a></li>
+        {% if patent.preferred_name %}
+        <li class="breadcrumb-item">
+            <a href="{{ url_for('patents_index', tribe=patent.preferred_name) }}">{{ patent.preferred_name }}</a>
+        </li>
+        {% endif %}
+        <li class="breadcrumb-item active">{{ patent.accession_number }}</li>
+    </ol>
+</nav>
+
+<div class="page-header">
+    <h1>{{ patent.full_name or 'Unknown' }}</h1>
+    <p class="lead">
+        {{ patent.preferred_name or '' }} &middot;
+        Accession {{ patent.accession_number or '—' }} &middot;
+        Allotment {{ patent.indian_allotment_number or '—' }}
+        {% if patent.centroid_lat and patent.centroid_lon %}
+        &middot;
+        <a href="{{ allotment_map_url }}?tribe={{ patent.preferred_name|urlencode }}&accession={{ patent.accession_number|urlencode }}" target="_blank" class="small">View on Map</a>
+        {% endif %}
+    </p>
+</div>
+
+{% if linked_claim %}
+<div class="alert alert-info d-flex align-items-center mb-4">
+    <strong class="me-2">Federal Register Claim:</strong>
+    This patent is linked to a forced fee claim —
+    <a href="{{ url_for('claim_detail', claim_id=linked_claim.id) }}" class="alert-link ms-1">
+        {{ linked_claim.allottee_name }}, Case {{ linked_claim.case_number }} ({{ linked_claim.tribe_identified }})
+    </a>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Patent Details -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h5 mb-0">
+                    Patent Details
+                    {% if patent.forced_fee == 'True' %}
+                    <span class="badge bg-warning text-dark ms-2">Forced Fee</span>
+                    {% endif %}
+                    {% if patent.cancelled_doc == 'True' %}
+                    <span class="badge bg-danger ms-2">Cancelled</span>
+                    {% endif %}
+                </h2>
+            </div>
+            <div class="card-body">
+                <dl class="claim-details">
+                    <dt>Full Name</dt>
+                    <dd>{{ patent.full_name or '—' }}</dd>
+
+                    <dt>Tribe</dt>
+                    <dd>{{ patent.preferred_name or '—' }}</dd>
+
+                    <dt>Accession Number</dt>
+                    <dd>
+                        {% if patent.accession_number %}
+                        {% set url = glo_url(patent.accession_number, patent.authority) %}
+                        {% if url %}
+                        <a href="{{ url }}" target="_blank" class="glo-link">{{ patent.accession_number }}</a>
+                        {% else %}
+                        {{ patent.accession_number }}
+                        {% endif %}
+                        {% else %}—{% endif %}
+                    </dd>
+
+                    <dt>Allotment Number</dt>
+                    <dd>{{ patent.indian_allotment_number or '—' }}</dd>
+
+                    <dt>Authority</dt>
+                    <dd>{{ patent.authority or '—' }}</dd>
+
+                    <dt>Signature Date</dt>
+                    <dd>
+                        {% if patent.signature_date %}
+                        {{ patent.signature_date.strftime('%Y-%m-%d') if patent.signature_date.strftime else patent.signature_date }}
+                        {% else %}—{% endif %}
+                    </dd>
+
+                    <dt>State</dt>
+                    <dd>{{ patent.state or '—' }}</dd>
+
+                    <dt>County</dt>
+                    <dd>{{ patent.county or '—' }}</dd>
+
+                    {% if patent.remarks %}
+                    <dt>Remarks</dt>
+                    <dd class="text-muted small">{{ patent.remarks }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLSS Land Description -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Land Description (PLSS)</h2>
+            </div>
+            <div class="card-body">
+                <dl class="claim-details">
+                    <dt>Meridian</dt>
+                    <dd>{{ patent.meridian or '—' }}</dd>
+
+                    <dt>Township</dt>
+                    <dd>{{ patent.township_number or '—' }}{{ patent.township_direction or '' }}</dd>
+
+                    <dt>Range</dt>
+                    <dd>{{ patent.range_number or '—' }}{{ patent.range_direction or '' }}</dd>
+
+                    <dt>Section</dt>
+                    <dd>{{ patent.section_number or '—' }}</dd>
+
+                    <dt>Aliquot Parts</dt>
+                    <dd>{{ patent.aliquot_parts or '—' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
