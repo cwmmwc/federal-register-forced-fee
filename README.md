@@ -1,28 +1,45 @@
-# Federal Register Claims Search
+# Indian Land Allotment Research
 
-A Flask application for searching and browsing forced fee patent claims and secretarial transfers published in the Federal Register on March 31 and November 7, 1983. Built to augment the search interface at [land-sales.iath.virginia.edu](https://land-sales.iath.virginia.edu/).
+A Flask application for researching the history of Indian allotment land dispossession — from the allotment era through termination. Integrates three primary datasets: 239,845 BLM allotment patents, 10,976 Federal Register forced fee claims, and historical land surveys from the Wilson Report (1934) and Murray Memorandum (1958).
 
-Part of the [Indian Land Allotment Research](https://land-sales.iath.virginia.edu/) project at the [Institute for Advanced Technology in the Humanities](https://www.iath.virginia.edu/), University of Virginia.
+Built at the [Institute for Advanced Technology in the Humanities](https://www.iath.virginia.edu/), University of Virginia, as part of the [Indian Land Allotment Research](https://land-sales.iath.virginia.edu/) project.
 
 ## The Data
 
-In 1983, the Bureau of Indian Affairs published two Federal Register notices listing Indian allotment claims filed with the government. These notices documented allotments where fee patents had been issued without the allottee's consent ("forced fee patents"), as well as secretarial transfers.
+### Federal Register Claims (1983)
+In 1983, the Bureau of Indian Affairs published two Federal Register notices listing Indian allotment claims. These documented allotments where fee patents had been issued without the allottee's consent ("forced fee patents"), as well as secretarial transfers.
 
-The dataset contains **10,976 claims**:
 - **9,649** forced fee patent claims
 - **1,327** secretarial transfers
+- ~7,110 linked to BLM patent records; ~2,539 unlinked
 
-Of the forced fee patent claims, approximately **7,110** have been linked to BLM patent records in the General Land Office database. The remaining ~2,539 claims have not yet been matched to patent records.
+**The Federal Register is the sole authoritative source for forced fee counts.** The BLM `forced_fee` flag inflates numbers through one-to-many patent matching and must not be used for this purpose.
+
+### BLM Allotment Patents
+**239,845** General Land Office patent records from the Bureau of Land Management, covering trust patents, fee patents, and other allotment-related patents across all tribes.
+
+### Wilson Report (1934)
+The Wilson Report documented the state of **212 Indian reservations** as of 1934, when the Indian Reorganization Act ended general allotment. Records original reservation areas, allotments made, and **23.2 million acres alienated** through sales and fee patents — the cumulative land loss of the allotment era.
+
+### Murray Memorandum (1947–1957)
+The Murray Memorandum documented a second wave of land loss during the termination era. Across **52 BIA agencies**, individual Indian trust land fell from **15.9 million acres (1947) to 12.6 million (1957)** — a net loss of 3.3 million acres through 18,546 trust removal transactions.
 
 ## Features
 
-- **Individual claim pages** — Each claim has its own page showing Federal Register data, linked BLM patents, trust-to-fee conversion details, and PLSS land descriptions
-- **Tribe landing pages** — Summary statistics, timeline charts, and sortable/filterable claims tables for each of the 57 tribes in the dataset
-- **Search and filter** — Search by allottee name, allotment number, tribe, claim type, and patent date range with server-side pagination
-- **Timeline visualization** — Distribution of forced fee patents by year, filterable by tribe, with policy era context
-- **CSV downloads** — Export filtered search results or per-tribe datasets
-- **GLO record links** — Direct links to Bureau of Land Management General Land Office patent records
-- **About page** — Historical context explaining forced fee patents, policy eras, and dataset limitations
+### Search and Browse
+- **Claims search** — Filter by allottee name, allotment number, tribe, claim type, date range. Server-side pagination.
+- **Patent search** — Browse 239,845 BLM patents with filters for name, tribe, state, authority type, date.
+- **Individual claim pages** — FR data, linked BLM patents, trust-to-fee conversion details, PLSS land descriptions.
+- **Tribe landing pages** — Summary statistics, timeline charts, and sortable claims tables for each of 57 tribes.
+- **CSV downloads** — Export filtered results for claims or patents.
+- **GLO record links** — Direct links to BLM General Land Office patent images.
+
+### Visualizations
+- **Trust-to-Fee Conversion (Sankey)** — How patents moved between trust and fee status, with FR forced fee claims as a sub-flow. Wilson baseline and Murray termination-era cards per tribe.
+- **All Patents Timeline** — Distribution of 239,845 patents by year, with forced fee toggle and Murray Memorandum overlay (acres removed from trust, 1948–1957).
+- **1934 Reservation Baseline** — Wilson Report land composition charts, alienation rates vs. FR claims, and Murray termination-era comparison showing two waves of land loss.
+- **Claims by Reservation** — Scatter and bar charts comparing fee patents vs. FR claims per tribe.
+- **Forced Fee Timeline** — FR claims by year with policy era context.
 
 ## Requirements
 
@@ -49,7 +66,6 @@ export DATABASE_URL="dbname=allotment_research user=your_user host=localhost"
 ## Running
 
 ```bash
-cd ~/Documents/UVA/UVa\ 2025-26/federal-register-app
 source venv/bin/activate
 python3 app.py
 ```
@@ -60,10 +76,15 @@ The app runs on http://127.0.0.1:5001 by default.
 
 | Table | Rows | Description |
 |-------|------|-------------|
-| `federal_register_claims` | 10,976 | Primary claims from the 1983 Federal Register notices |
-| `forced_fee_patents_rails` | 17,560 | Denormalized patent-to-claim linkages |
-| `fee_patents` | 88,537 | BLM fee patent records |
-| `trust_patents` | 95,353 | BLM trust patent records |
+| `federal_register_claims` | 10,976 | 1983 Federal Register forced fee claims and secretarial transfers |
+| `blm_allotment_patents` | 239,845 | Full BLM patent mirror from ArcGIS |
+| `forced_fee_patents_rails` | 17,560 | Hand-verified claim-to-patent linkages |
 | `trust_fee_linkages` | 29,229 | Trust-to-fee patent conversion records |
+| `wilson_table_vi` | 212 | Wilson Report 1934 reservation baseline data |
+| `murray_comparative` | 52 | Murray Memorandum 1947 vs 1957 land by agency |
+| `murray_transactions` | 520 | Murray trust removal transaction counts by agency and year |
+| `murray_trust_removal` | 83 | Murray trust land removed by area office and year |
+| `murray_agency_removal` | 41 | Murray total acres removed by agency |
+| `murray_lands_acquired` | 23 | Federal lands acquired since 1930 |
 | `parcels_patents_by_tribe` | 401,811 | PLSS legal land descriptions |
-| `tribes` | 908 | Tribe name lookup |
+| `fee_patents` / `trust_patents` | 88,537 / 95,353 | Older BLM patent tables (legacy) |
