@@ -677,7 +677,7 @@ def tribes_list():
         cur.execute("""
             SELECT
                 fr.tribe_identified,
-                COUNT(*) as claim_count,
+                COUNT(DISTINCT fr.id) as claim_count,
                 COUNT(ffp.id) as patent_linkage_count,
                 MIN(ffp.patents_signature_date) as earliest,
                 MAX(ffp.patents_signature_date) as latest
