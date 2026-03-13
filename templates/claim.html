@@ -61,9 +61,9 @@
                     <dt>Document Source</dt>
                     <dd>
                         {% if claim.document_source == 'fedreg_1983_03_31' %}
-                            Federal Register, March 31, 1983
+                            <a href="https://land-sales.iath.virginia.edu/documents/federal_register/fedreg-1983_03_31.pdf" target="_blank">Federal Register, March 31, 1983</a>
                         {% elif claim.document_source == 'fedreg_1983_11_07' %}
-                            Federal Register, November 7, 1983
+                            <a href="https://land-sales.iath.virginia.edu/documents/federal_register/fedreg-1983_11_07.pdf" target="_blank">Federal Register, November 7, 1983</a>
                         {% else %}
                             {{ claim.document_source or 'Unknown' }}
                         {% endif %}
