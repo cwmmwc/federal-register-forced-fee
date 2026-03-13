@@ -166,14 +166,20 @@ def api_search():
         date_from = request.args.get("date_from", "").strip()
         date_to = request.args.get("date_to", "").strip()
 
-        # Order
-        order_col_idx = request.args.get("order[0][column]", 0, type=int)
-        order_dir = request.args.get("order[0][dir]", "asc")
-        order_cols = ["fr.case_number", "fr.allottee_name", "fr.tribe_identified",
+        # Order (support multi-column sort from DataTables)
+        order_cols = ["fr.bia_agency_code", "fr.case_number", "fr.allottee_name", "fr.tribe_identified",
                       "fr.allotment_number", "fr.claim_type", "min_date"]
-        order_col = order_cols[min(order_col_idx, len(order_cols) - 1)]
-        if order_dir not in ("asc", "desc"):
-            order_dir = "asc"
+        order_parts = []
+        for i in range(len(order_cols)):
+            col_idx = request.args.get(f"order[{i}][column]", type=int)
+            col_dir = request.args.get(f"order[{i}][dir]", "")
+            if col_idx is None:
+                break
+            col = order_cols[min(col_idx, len(order_cols) - 1)]
+            if col_dir not in ("asc", "desc"):
+                col_dir = "asc"
+            order_parts.append(f"{col} {col_dir}")
+        order_clause = ", ".join(order_parts) if order_parts else "fr.bia_agency_code asc, fr.case_number asc"
 
         conditions = []
         params = []
@@ -226,6 +232,7 @@ def api_search():
         data_sql = f"""
             SELECT
                 fr.id,
+                fr.bia_agency_code,
                 fr.case_number,
                 fr.allottee_name,
                 fr.tribe_identified,
@@ -238,9 +245,9 @@ def api_search():
                 ON LTRIM(fr.case_number, '0') = LTRIM(ffp.case_number, '0')
                 AND fr.allottee_name = ffp.fedreg_allottee
             {where}
-            GROUP BY fr.id, fr.case_number, fr.allottee_name, fr.tribe_identified,
+            GROUP BY fr.id, fr.bia_agency_code, fr.case_number, fr.allottee_name, fr.tribe_identified,
                      fr.allotment_number, fr.claim_type
-            ORDER BY {order_col} {order_dir}
+            ORDER BY {order_clause}
             LIMIT %s OFFSET %s
         """
         cur.execute(data_sql, params + [length, start])
@@ -254,6 +261,7 @@ def api_search():
                 sig_date = r["min_date"].strftime("%Y-%m-%d") if hasattr(r["min_date"], "strftime") else str(r["min_date"])
             data.append({
                 "id": r["id"],
+                "bia_agency_code": r["bia_agency_code"],
                 "case_number": r["case_number"],
                 "allottee_name": r["allottee_name"],
                 "tribe": r["tribe_identified"],
@@ -312,6 +320,7 @@ def api_search_csv():
 
         sql = f"""
             SELECT
+                fr.bia_agency_code,
                 fr.case_number,
                 fr.allottee_name,
                 fr.tribe_identified,
@@ -328,7 +337,7 @@ def api_search_csv():
                 ON LTRIM(fr.case_number, '0') = LTRIM(ffp.case_number, '0')
                 AND fr.allottee_name = ffp.fedreg_allottee
             {where}
-            ORDER BY fr.tribe_identified, fr.case_number
+            ORDER BY fr.bia_agency_code, fr.case_number
         """
         cur.execute(sql, params)
         rows = cur.fetchall()
@@ -336,13 +345,13 @@ def api_search_csv():
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            "Case Number", "Allottee Name", "Tribe", "Allotment Number",
+            "BIA Agency Code", "Case Number", "Allottee Name", "Tribe", "Allotment Number",
             "Claim Type", "Document Source", "GLO Patentee(s)",
             "Accession Number", "Patent Date", "Document Class", "State"
         ])
         for r in rows:
             writer.writerow([
-                r["case_number"], r["allottee_name"], r["tribe_identified"],
+                r["bia_agency_code"], r["case_number"], r["allottee_name"], r["tribe_identified"],
                 r["allotment_number"], r["claim_type"], r["document_source"],
                 r["glo_patentees"], r["patents_accession_number"],
                 r["patents_signature_date"], r["patents_document_class"],
@@ -479,6 +488,15 @@ def tribe_detail(tribe_slug):
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+        # Agency codes for this tribe
+        cur.execute("""
+            SELECT DISTINCT bia_agency_code
+            FROM federal_register_claims
+            WHERE tribe_identified = %s
+            ORDER BY bia_agency_code
+        """, (tribe_name,))
+        agency_codes = [row["bia_agency_code"] for row in cur.fetchall()]
+
         # Summary stats
         cur.execute("""
             SELECT COUNT(*) as total_claims
@@ -535,6 +553,7 @@ def tribe_detail(tribe_slug):
             "tribe.html",
             tribe_name=tribe_name,
             tribe_slug=tribe_slug,
+            agency_codes=agency_codes,
             stats=stats,
             date_info=date_info,
             timeline_data=timeline_data,
@@ -701,6 +720,7 @@ def tribes_list():
         cur.execute("""
             SELECT
                 fr.tribe_identified,
+                array_agg(DISTINCT fr.bia_agency_code ORDER BY fr.bia_agency_code) as agency_codes,
                 COUNT(DISTINCT fr.id) as claim_count,
                 COUNT(ffp.id) as patent_linkage_count,
                 MIN(ffp.patents_signature_date) as earliest,

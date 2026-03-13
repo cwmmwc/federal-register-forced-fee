@@ -12,6 +12,7 @@
         <thead>
             <tr>
                 <th>Tribe</th>
+                <th>Agency Code(s)</th>
                 <th>Claims</th>
                 <th>Patent Linkages</th>
                 <th>Earliest Patent</th>
@@ -26,6 +27,7 @@
                         {{ t.tribe_identified }}
                     </a>
                 </td>
+                <td><span class="text-muted small">{{ t.agency_codes | join(', ') }}</span></td>
                 <td>{{ t.claim_count }}</td>
                 <td>
                     {% if t.patent_linkage_count > 0 %}
@@ -42,6 +44,7 @@
         <tfoot>
             <tr class="fw-bold">
                 <td>Total</td>
+                <td></td>
                 <td>{{ tribes|sum(attribute='claim_count') }}</td>
                 <td>{{ tribes|sum(attribute='patent_linkage_count') }}</td>
                 <td colspan="2"></td>

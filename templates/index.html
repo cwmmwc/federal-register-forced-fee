@@ -63,6 +63,7 @@
 <table id="claimsTable" class="table table-striped table-hover" style="width:100%">
     <thead>
         <tr>
+            <th>Agency Code</th>
             <th>Case #</th>
             <th>Allottee Name</th>
             <th>Tribe</th>
@@ -120,6 +121,7 @@ $(function() {
             }
         },
         columns: [
+            { data: 'bia_agency_code' },
             {
                 data: 'case_number',
                 render: function(data, type, row) {
@@ -150,7 +152,7 @@ $(function() {
                 }
             }
         ],
-        order: [[0, 'asc']],
+        order: [[0, 'asc'], [1, 'asc']],
         pageLength: 25,
         language: {
             info: "Showing _START_ to _END_ of _TOTAL_ claims",
