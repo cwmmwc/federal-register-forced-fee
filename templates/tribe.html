@@ -11,7 +11,7 @@
 
 <div class="page-header">
     <h1>{{ tribe_name }}</h1>
-    <a href="{{ allotment_map_url }}?tribe={{ tribe_name|urlencode }}" target="_blank" class="btn btn-sm btn-outline-dark">
+    <a href="{{ url_for('allotment_map', tribe=tribe_name) }}" class="btn btn-sm btn-outline-dark">
         View on Allotment Map
     </a>
 </div>

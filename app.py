@@ -26,13 +26,6 @@ DATABASE_URL = os.environ.get(
     "dbname=allotment_research user=cwm6W"
 )
 
-ALLOTMENT_MAP_URL = os.environ.get("ALLOTMENT_MAP_URL", "http://localhost:8000")
-
-@app.context_processor
-def inject_map_url():
-    return dict(allotment_map_url=ALLOTMENT_MAP_URL)
-
-
 def get_db():
     conn = psycopg2.connect(DATABASE_URL)
     conn.set_client_encoding('UTF8')
@@ -115,6 +108,12 @@ def splash():
 def home():
     """Research overview page."""
     return render_template("home.html")
+
+
+@app.route("/map")
+def allotment_map():
+    """Interactive allotment patent map (Leaflet + Esri Feature Service)."""
+    return render_template("map.html")
 
 
 @app.route("/claims")
@@ -793,13 +792,13 @@ def api_timeline():
 
 @app.route("/patents")
 def patents_index():
-    """Browse / search all BLM allotment patents."""
+    """Browse / search all allotment patents (285,870 from Rails DB + BLM)."""
     conn = get_db()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT DISTINCT preferred_name FROM blm_allotment_patents WHERE preferred_name IS NOT NULL ORDER BY preferred_name")
+        cur.execute("SELECT DISTINCT preferred_name FROM all_patents WHERE preferred_name IS NOT NULL AND preferred_name != '' ORDER BY preferred_name")
         tribes = [r[0] for r in cur.fetchall()]
-        cur.execute("SELECT DISTINCT state FROM blm_allotment_patents WHERE state IS NOT NULL ORDER BY state")
+        cur.execute("SELECT DISTINCT state FROM all_patents WHERE state IS NOT NULL AND state != '' ORDER BY state")
         states = [r[0] for r in cur.fetchall()]
         return render_template("patents.html", tribes=tribes, states=states)
     finally:
@@ -823,7 +822,7 @@ TRUST_AUTHORITIES = (
 
 @app.route("/api/patents")
 def api_patents():
-    """JSON API for patent search (DataTables server-side)."""
+    """JSON API for patent search (DataTables server-side). Queries all_patents (285,870)."""
     conn = get_db()
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -839,11 +838,12 @@ def api_patents():
         patent_type = request.args.get("patent_type", "").strip()
         date_from = request.args.get("date_from", "").strip()
         date_to = request.args.get("date_to", "").strip()
+        mappable = request.args.get("mappable", "").strip()
 
         order_col_idx = request.args.get("order[0][column]", 0, type=int)
         order_dir = request.args.get("order[0][dir]", "asc")
         order_cols = ["full_name", "preferred_name", "state",
-                      "indian_allotment_number", "authority", "signature_date", "forced_fee"]
+                      "indian_allotment_number", "authority", "signature_date", "forced_fee", "has_plss_geometry"]
         order_col = order_cols[min(order_col_idx, len(order_cols) - 1)]
         if order_dir not in ("asc", "desc"):
             order_dir = "asc"
@@ -877,19 +877,24 @@ def api_patents():
         if date_to:
             conditions.append("signature_date <= %s")
             params.append(date_to)
+        if mappable == "yes":
+            conditions.append("has_plss_geometry = true")
+        elif mappable == "no":
+            conditions.append("has_plss_geometry = false")
 
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
 
-        cur.execute("SELECT COUNT(*) as cnt FROM blm_allotment_patents")
+        cur.execute("SELECT COUNT(*) as cnt FROM all_patents")
         total = cur.fetchone()["cnt"]
 
-        cur.execute(f"SELECT COUNT(*) as cnt FROM blm_allotment_patents {where}", params)
+        cur.execute(f"SELECT COUNT(*) as cnt FROM all_patents {where}", params)
         filtered = cur.fetchone()["cnt"]
 
         cur.execute(f"""
-            SELECT objectid, full_name, preferred_name, state,
-                   indian_allotment_number, authority, signature_date, forced_fee
-            FROM blm_allotment_patents
+            SELECT id, objectid, full_name, preferred_name, state,
+                   indian_allotment_number, authority, signature_date,
+                   forced_fee, has_plss_geometry
+            FROM all_patents
             {where}
             ORDER BY {order_col} {order_dir} NULLS LAST
             LIMIT %s OFFSET %s
@@ -902,6 +907,7 @@ def api_patents():
             if r["signature_date"]:
                 sig_date = r["signature_date"].strftime("%Y-%m-%d") if hasattr(r["signature_date"], "strftime") else str(r["signature_date"])
             data.append({
+                "id": r["id"],
                 "objectid": r["objectid"],
                 "full_name": r["full_name"] or "",
                 "preferred_name": r["preferred_name"] or "",
@@ -910,6 +916,7 @@ def api_patents():
                 "authority": r["authority"] or "",
                 "signature_date": sig_date,
                 "forced_fee": r["forced_fee"] == "True",
+                "has_plss_geometry": r["has_plss_geometry"],
             })
 
         return jsonify({
@@ -924,7 +931,7 @@ def api_patents():
 
 @app.route("/api/patents/csv")
 def api_patents_csv():
-    """CSV download of patent search results."""
+    """CSV download of patent search results from all_patents (285,870)."""
     conn = get_db()
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -936,6 +943,7 @@ def api_patents_csv():
         patent_type = request.args.get("patent_type", "").strip()
         date_from = request.args.get("date_from", "").strip()
         date_to = request.args.get("date_to", "").strip()
+        mappable = request.args.get("mappable", "").strip()
 
         conditions = []
         params = []
@@ -966,15 +974,20 @@ def api_patents_csv():
         if date_to:
             conditions.append("signature_date <= %s")
             params.append(date_to)
+        if mappable == "yes":
+            conditions.append("has_plss_geometry = true")
+        elif mappable == "no":
+            conditions.append("has_plss_geometry = false")
 
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
 
         cur.execute(f"""
             SELECT accession_number, full_name, preferred_name, state, county,
                    indian_allotment_number, authority, signature_date, forced_fee,
+                   document_class, total_acres, has_plss_geometry,
                    meridian, township_number, township_direction,
                    range_number, range_direction, section_number, aliquot_parts, remarks
-            FROM blm_allotment_patents
+            FROM all_patents
             {where}
             ORDER BY preferred_name, full_name
         """, params)
@@ -985,6 +998,7 @@ def api_patents_csv():
         writer.writerow([
             "Accession Number", "Full Name", "Tribe", "State", "County",
             "Allotment Number", "Authority", "Signature Date", "Forced Fee",
+            "Document Class", "Acres", "Mappable",
             "Meridian", "Township", "Township Dir", "Range", "Range Dir",
             "Section", "Aliquot Parts", "Remarks"
         ])
@@ -996,6 +1010,8 @@ def api_patents_csv():
                 r["accession_number"], r["full_name"], r["preferred_name"],
                 r["state"], r["county"], r["indian_allotment_number"],
                 r["authority"], sig_date, r["forced_fee"],
+                r["document_class"], r["total_acres"],
+                "Yes" if r["has_plss_geometry"] else "No",
                 r["meridian"], r["township_number"], r["township_direction"],
                 r["range_number"], r["range_direction"], r["section_number"],
                 r["aliquot_parts"], r["remarks"],
@@ -1004,7 +1020,7 @@ def api_patents_csv():
         return Response(
             output.getvalue(),
             mimetype="text/csv",
-            headers={"Content-Disposition": "attachment; filename=blm_allotment_patents.csv"}
+            headers={"Content-Disposition": "attachment; filename=allotment_patents.csv"}
         )
     finally:
         conn.close()
@@ -1012,15 +1028,20 @@ def api_patents_csv():
 
 @app.route("/patent/<int:objectid>")
 def patent_detail(objectid):
-    """Individual BLM patent record page."""
+    """Individual patent record page. Tries BLM objectid first, then rails_patents id."""
     conn = get_db()
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cur.execute("SELECT * FROM blm_allotment_patents WHERE objectid = %s", (objectid,))
         patent = cur.fetchone()
+
+        # If not found in BLM table, try as a rails_patents id
         if not patent:
-            abort(404)
+            cur.execute("SELECT * FROM all_patents WHERE id = %s", (objectid,))
+            patent = cur.fetchone()
+            if not patent:
+                abort(404)
 
         # Cross-link: check if this patent's accession_number is in forced_fee_patents_rails
         linked_claim = None

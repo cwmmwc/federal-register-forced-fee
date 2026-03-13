@@ -3,10 +3,12 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>BLM Allotment Patents</h1>
-    <p class="lead">Browse 239,845 Bureau of Land Management allotment patent records across 208 tribes and 21 states.
-        <a href="{{ url_for('patents_timeline') }}">View Patent Timeline</a>
+    <h1>Allotment Patents</h1>
+    <p class="lead">Browse 285,870 allotment patent records from the Bureau of Land Management General Land Office.
+        <a href="{{ url_for('patents_timeline') }}">View Patent Timeline</a> ·
+        <a href="{{ url_for('allotment_map') }}">View on Map</a>
     </p>
+    <p class="text-muted small">Of these, 239,845 patents are <strong>mappable</strong> — matched to Public Land Survey System parcels and visible on the <a href="{{ url_for('allotment_map') }}">allotment map</a>. The remaining 46,025 patents could not be geocoded, primarily because they are on reservations that use non-rectangular surveys (Navajo, Gila River, Colorado River in Arizona/New Mexico) or predate the PLSS (Chickasaw/Choctaw in Alabama/Mississippi). These patents are searchable here but do not appear on the map. <a href="{{ url_for('about') }}#data-coverage">Read more</a></p>
     <p class="text-muted small">Note: The "Forced Fee Only" filter shows 15,045 patents flagged by BLM as forced fee. This is larger than the 9,649 forced fee claims in the <a href="{{ url_for('claims_search') }}">Federal Register dataset</a>, which comes from two specific 1983 publications. BLM's forced fee flag covers additional patents not listed in those Federal Register notices.</p>
 </div>
 
@@ -51,6 +53,14 @@
                         <option value="forced">Forced Fee Only</option>
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label for="mappableFilter" class="form-label">Map Status</label>
+                    <select class="form-select" id="mappableFilter">
+                        <option value="">All Patents</option>
+                        <option value="yes">Mappable (239,845)</option>
+                        <option value="no">Not Mappable (46,025)</option>
+                    </select>
+                </div>
             </div>
             <div class="row g-3 mt-1">
                 <div class="col-md-2">
@@ -81,6 +91,7 @@
             <th>Authority</th>
             <th>Date</th>
             <th>Forced Fee</th>
+            <th>Map</th>
         </tr>
     </thead>
 </table>
@@ -97,6 +108,7 @@ $(function() {
     if (urlParams.get('patent_type')) $('#patentTypeFilter').val(urlParams.get('patent_type'));
     if (urlParams.get('date_from')) $('#dateFrom').val(urlParams.get('date_from'));
     if (urlParams.get('date_to')) $('#dateTo').val(urlParams.get('date_to'));
+    if (urlParams.get('mappable')) $('#mappableFilter').val(urlParams.get('mappable'));
 
     function updateURL() {
         var params = new URLSearchParams();
@@ -107,7 +119,8 @@ $(function() {
             state: $('#stateFilter').val(),
             patent_type: $('#patentTypeFilter').val(),
             date_from: $('#dateFrom').val(),
-            date_to: $('#dateTo').val()
+            date_to: $('#dateTo').val(),
+            mappable: $('#mappableFilter').val()
         };
         for (var key in fields) {
             if (fields[key]) params.set(key, fields[key]);
@@ -130,13 +143,15 @@ $(function() {
                 d.patent_type = $('#patentTypeFilter').val();
                 d.date_from = $('#dateFrom').val();
                 d.date_to = $('#dateTo').val();
+                d.mappable = $('#mappableFilter').val();
             }
         },
         columns: [
             {
                 data: 'full_name',
                 render: function(data, type, row) {
-                    return '<a href="/patent/' + row.objectid + '">' + (data || '—') + '</a>';
+                    var linkId = row.objectid || row.id;
+                    return '<a href="/patent/' + linkId + '">' + (data || '—') + '</a>';
                 }
             },
             { data: 'preferred_name' },
@@ -149,6 +164,13 @@ $(function() {
                 render: function(data) {
                     if (data) return '<span class="badge bg-warning text-dark">Forced Fee</span>';
                     return '';
+                }
+            },
+            {
+                data: 'has_plss_geometry',
+                render: function(data) {
+                    if (data) return '<span class="badge bg-success">Yes</span>';
+                    return '<span class="badge bg-secondary">No</span>';
                 }
             }
         ],
@@ -174,7 +196,7 @@ $(function() {
 
     $('#clearBtn').on('click', function() {
         $('#nameSearch, #allotmentSearch, #dateFrom, #dateTo').val('');
-        $('#tribeFilter, #stateFilter, #patentTypeFilter').val('');
+        $('#tribeFilter, #stateFilter, #patentTypeFilter, #mappableFilter').val('');
         updateURL();
         table.ajax.reload();
     });
@@ -187,7 +209,8 @@ $(function() {
             state: $('#stateFilter').val(),
             patent_type: $('#patentTypeFilter').val(),
             date_from: $('#dateFrom').val(),
-            date_to: $('#dateTo').val()
+            date_to: $('#dateTo').val(),
+            mappable: $('#mappableFilter').val()
         });
         window.location = '{{ url_for("api_patents_csv") }}?' + params.toString();
     });

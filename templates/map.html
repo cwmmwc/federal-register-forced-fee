@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allotment Map — Land Allotment Research</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@300;400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='map/css/styles.css') }}" />
+<style>
+/* Thin site nav bar above the map app */
+.site-nav {
+    background: #2c1810;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    height: 32px;
+    gap: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    z-index: 10000;
+    flex-shrink: 0;
+}
+.site-nav a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+}
+.site-nav a:hover { color: #fff; }
+.site-nav .site-name {
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-right: auto;
+}
+/* Adjust body and app layout for the nav bar */
+body {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.app {
+    height: auto;
+    flex: 1;
+    min-height: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- Site navigation -->
+<div class="site-nav">
+    <a href="{{ url_for('home') }}" class="site-name">Land Allotment Research</a>
+    <a href="{{ url_for('claims_search') }}">Claims</a>
+    <a href="{{ url_for('patents_index') }}">Patents</a>
+    <a href="{{ url_for('tribes_list') }}">Tribes</a>
+    <a href="{{ url_for('about') }}">About</a>
+</div>
+
+<div id="loading">
+  <h2>Loading Patent Data&hellip;</h2>
+  <div id="load-bar"><div id="load-fill"></div></div>
+  <div id="load-msg">Connecting&hellip;</div>
+</div>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title" id="btn-home" title="Reset all filters and return to default view" style="cursor:pointer;">Allotment Patent Patterns</div>
+    <div class="header-tabs">
+      <button class="header-tab active" data-view="heatmap">Analysis</button>
+      <button class="header-tab" data-view="compare">Compare Tribes</button>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="header-status" id="status">&mdash;</div>
+  </div>
+
+  <!-- Left: Controls -->
+  <div class="controls">
+    <div class="ctrl-section">
+      <div class="ctrl-label">Name Search</div>
+      <div class="ctrl-row" style="gap:4px;">
+        <input class="ctrl-input" id="name-search" placeholder="e.g. Caleb Carter" style="flex:1;" />
+        <button class="ctrl-btn" id="name-search-btn" style="white-space:nowrap;">Find</button>
+      </div>
+      <div id="name-results" class="name-results"></div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Patent Category</div>
+      <select class="ctrl-select" id="sel-category">
+        <option value="all">All Patents (239,845)</option>
+        <option value="fee">Fee Patents (81,249)</option>
+        <option value="trust">Trust Patents (78,421)</option>
+        <option value="forced">Forced Fee Only (~15,045)</option>
+      </select>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Time Range</div>
+      <div class="ctrl-row">
+        <select class="ctrl-select" id="sel-year-start"></select>
+        <span style="color:var(--text-faint);line-height:28px;">to</span>
+        <select class="ctrl-select" id="sel-year-end"></select>
+      </div>
+      <div class="ctrl-row" style="flex-wrap:wrap;gap:4px;">
+        <button class="ctrl-btn" onclick="setTimePreset(1887,1906)">Dawes Era</button>
+        <button class="ctrl-btn" onclick="setTimePreset(1906,1920)">Burke Act</button>
+        <button class="ctrl-btn" onclick="setTimePreset(1917,1921)">Declaration</button>
+        <button class="ctrl-btn" onclick="setTimePreset(1921,1934)">1921&ndash;IRA</button>
+        <button class="ctrl-btn" onclick="setTimePreset(1934,1953)">IRA Era</button>
+        <button class="ctrl-btn" onclick="setTimePreset(1953,1960)">Termination</button>
+        <button class="ctrl-btn" onclick="setTimePreset(1854,2018)">All</button>
+      </div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">State</div>
+      <select class="ctrl-select" id="sel-state">
+        <option value="">All States</option>
+      </select>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Tribe <span id="tribe-count" style="font-size:9px;color:var(--text-faint);text-transform:none;letter-spacing:0;"></span></div>
+      <input class="ctrl-input" id="tribe-search" placeholder="Search tribes&hellip;" />
+      <button class="ctrl-btn" id="tribe-clear" style="display:none;width:100%;margin-top:4px;">Clear selection</button>
+      <div class="tribe-selector" id="tribe-list"></div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Map Display</div>
+      <div class="ctrl-row" style="gap:4px;margin-bottom:6px;">
+        <button class="ctrl-btn basemap-btn active" id="btn-basemap-topo" onclick="switchBasemap('topo')">Topo</button>
+        <button class="ctrl-btn basemap-btn" id="btn-basemap-lightGray" onclick="switchBasemap('lightGray')">Light Gray</button>
+      </div>
+      <label class="ctrl-checkbox"><input type="checkbox" id="chk-reservations" /> Federal Indian Reservations</label>
+      <label class="ctrl-checkbox"><input type="checkbox" id="chk-rankin" /> Rankin Map, Crow Reservation 1907</label>
+      <label class="ctrl-checkbox"><input type="checkbox" id="chk-heatmap" checked /> Fee patent density heatmap</label>
+      <label class="ctrl-checkbox"><input type="checkbox" id="chk-points" checked /> Show individual patents</label>
+      <label class="ctrl-checkbox"><input type="checkbox" id="chk-forced-highlight" checked /> Highlight forced fee</label>
+      <label class="ctrl-checkbox"><input type="checkbox" id="chk-timeline" /> Cumulative timeline mode</label>
+      <label class="ctrl-checkbox"><input type="checkbox" id="chk-original-class" /> Show as originally issued</label>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="ctrl-label">Legend</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#1565c0;border:1px solid #0d47a1;"></div>Trust Patent<span class="legend-count" id="leg-trust">&mdash;</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#e07800;border:1px solid #9a5200;"></div>Fee Patent<span class="legend-count" id="leg-fee">&mdash;</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#c62828;border:2px solid #ffd600;"></div>Forced Fee<span class="legend-count" id="leg-forced">&mdash;</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(154,148,144,0.25);border:1px solid #6a6460;"></div>Other / Unclassified</div>
+    </div>
+
+    <div class="ctrl-section">
+      <button class="ctrl-btn primary" onclick="runAnalysis()" style="width:100%">&#9654; Run Analysis</button>
+    </div>
+  </div>
+
+  <!-- Center: Map -->
+  <div class="map-area">
+    <div id="map"></div>
+    <div class="map-overlay-stat" id="map-stat">Select filters and click <strong>Run Analysis</strong> to load patent data.</div>
+    <div id="map-year-overlay" class="map-year-overlay" style="display:none;"></div>
+    <div id="tl-metrics-overlay" class="tl-metrics-overlay" style="display:none;">
+      <div class="tl-metric-row"><span class="tl-metric-k">Total</span><span class="tl-metric-v" id="tl-metric-total">&mdash;</span></div>
+      <div class="tl-metric-row"><span class="tl-metric-k" style="color:var(--trust-color)">Trust</span><span class="tl-metric-v" id="tl-metric-trust">&mdash;</span></div>
+      <div class="tl-metric-row"><span class="tl-metric-k" style="color:var(--fee-color)">Fee</span><span class="tl-metric-v" id="tl-metric-fee">&mdash;</span></div>
+      <div class="tl-metric-row"><span class="tl-metric-k" style="color:var(--forced-color)">Forced</span><span class="tl-metric-v" id="tl-metric-forced">&mdash;</span></div>
+      <div class="tl-metric-row tl-metric-divider"><span class="tl-metric-k">Out of Trust</span><span class="tl-metric-v" id="tl-metric-pct">&mdash;</span></div>
+    </div>
+  </div>
+
+  <!-- Timeline bar (hidden by default, shown when cumulative mode active) -->
+  <div id="timeline-bar" class="timeline-bar" style="display:none;">
+    <div class="timeline-controls">
+      <button class="ctrl-btn" id="tl-play">&#9654;</button>
+      <select class="ctrl-select" id="tl-speed" style="width:auto;">
+        <option value="1000">1 yr/sec</option>
+        <option value="500">2 yr/sec</option>
+        <option value="200" selected>5 yr/sec</option>
+      </select>
+      <span id="tl-year-label" style="font-weight:600;color:var(--text);margin-left:8px;">&mdash;</span>
+      <div id="tl-ratio" class="timeline-ratio">
+        <div class="ratio-bar">
+          <div class="ratio-segment trust" id="tl-ratio-trust"></div>
+          <div class="ratio-segment fee" id="tl-ratio-fee"></div>
+          <div class="ratio-segment forced" id="tl-ratio-forced"></div>
+        </div>
+        <span class="ratio-label" id="tl-ratio-label"></span>
+      </div>
+      <span id="tl-stats" style="margin-left:auto;color:var(--text-dim);font-size:10px;">&mdash;</span>
+    </div>
+    <div class="timeline-track" id="tl-track">
+      <canvas id="tl-chart" height="40"></canvas>
+      <div class="timeline-thumb" id="tl-thumb"></div>
+      <input type="range" id="tl-slider" class="timeline-slider" min="1850" max="1975" value="1850" step="1" />
+    </div>
+  </div>
+
+  <!-- Right: Compare (hidden by default) -->
+  <div class="analysis" id="compare-panel" style="display:none;">
+    <div class="analysis-section">
+      <div class="analysis-title">Tribe Comparison</div>
+      <div class="analysis-subtitle">Side-by-side breakdown of loaded tribes</div>
+      <div id="compare-content"><div class="insight">Run an analysis to compare tribes.</div></div>
+    </div>
+  </div>
+
+  <!-- Right: Analysis -->
+  <div class="analysis" id="analysis-panel">
+    <div class="analysis-section" id="guide-section">
+      <div class="analysis-subtitle">How to Use This Map</div>
+      <div class="guide-text">
+        Start with <strong>all patents loaded</strong> to see the national picture &mdash; 239,845 allotment patents across every reservation. Pan and zoom to explore regions. At wider zoom levels, patents appear as <strong>dots</strong> (centroids) for performance. Zoom in past a reservation level and they become <strong>parcel shapes</strong> showing actual land boundaries.<br><br>
+        Use the <strong>tribe, state, and year filters</strong> on the left to narrow your view, then click <strong>Run Analysis</strong> to load detailed statistics and charts below.
+      </div>
+      <div class="analysis-subtitle" style="margin-top:12px;">Data Coverage Note</div>
+      <div class="guide-text">
+        The research database contains <strong>285,870 patents</strong>. This map displays 239,845 &mdash; the patents that could be matched to parcels in the Public Land Survey System (PLSS). Approximately 46,000 patents are not shown because they use non-rectangular survey descriptions that cannot be placed on the PLSS grid. The largest gaps are in <strong>Arizona and New Mexico</strong>, where Navajo, Gila River, and Colorado River reservation allotments used metes-and-bounds surveys. Additional missing records include patents with incomplete legal descriptions or non-standard document types. <a href="{{ url_for('about') }}#data-coverage" style="color:var(--amber);">Read more</a>
+      </div>
+    </div>
+    <div class="analysis-section">
+      <div class="analysis-subtitle">Summary</div>
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card"><div class="val" id="s-total">&mdash;</div><div class="lbl">Patents loaded</div></div>
+        <div class="stat-card"><div class="val" id="s-tribes">&mdash;</div><div class="lbl">Tribes</div></div>
+        <div class="stat-card"><div class="val" id="s-states">&mdash;</div><div class="lbl">States</div></div>
+        <div class="stat-card"><div class="val" id="s-span">&mdash;</div><div class="lbl">Year span</div></div>
+      </div>
+    </div>
+
+    <div class="analysis-section">
+      <div class="analysis-title">Temporal Distribution</div>
+      <div class="analysis-subtitle">Patents per year &mdash; are there waves?</div>
+      <div class="chart-container"><canvas id="chart-temporal" height="140"></canvas></div>
+      <div class="insight" id="insight-temporal">Run an analysis to see temporal patterns.</div>
+    </div>
+
+    <div class="analysis-section">
+      <div class="analysis-title">Trust vs. Fee Timeline</div>
+      <div class="analysis-subtitle">When did each type peak?</div>
+      <div class="chart-container"><canvas id="chart-compare" height="140"></canvas></div>
+      <div class="insight" id="insight-compare">&mdash;</div>
+    </div>
+
+    <div class="analysis-section">
+      <div class="analysis-title">Forced Fee Rate by Reservation</div>
+      <div class="analysis-subtitle">What share of each reservation's fee patents were forced?</div>
+      <div class="chart-container"><canvas id="chart-forced-rate" height="160"></canvas></div>
+      <div class="insight" id="insight-forced-rate">&mdash;</div>
+    </div>
+
+    <div class="analysis-section">
+      <div class="analysis-title">Conversion Velocity</div>
+      <div class="analysis-subtitle">How quickly did fee patents follow trust patents by tribe?</div>
+      <div class="chart-container"><canvas id="chart-velocity" height="160"></canvas></div>
+      <div class="insight" id="insight-velocity">&mdash;</div>
+    </div>
+
+    <div class="analysis-section">
+      <div class="analysis-title">Top Counties</div>
+      <div class="analysis-subtitle">Where is activity most concentrated?</div>
+      <div id="county-bars"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CDN dependencies -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- App modules (order matters) -->
+<script src="{{ url_for('static', filename='map/js/config.js') }}"></script>
+<script src="{{ url_for('static', filename='map/js/utils.js') }}"></script>
+<script src="{{ url_for('static', filename='map/js/data.js') }}"></script>
+<script src="{{ url_for('static', filename='map/js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='map/js/controls.js') }}"></script>
+<script src="{{ url_for('static', filename='map/js/analysis.js') }}"></script>
+<script src="{{ url_for('static', filename='map/js/timeline.js') }}"></script>
+<script src="{{ url_for('static', filename='map/js/main.js') }}"></script>
+</body>
+</html>

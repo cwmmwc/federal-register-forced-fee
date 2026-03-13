@@ -106,6 +106,23 @@
             </dl>
         </section>
 
+        <section class="mb-5" id="data-coverage">
+            <h2>Data Coverage: Patents and the Map</h2>
+            <p>The research database contains <strong>285,870 allotment patents</strong> from the Bureau of Land Management General Land Office. Of these, <strong>239,845</strong> are displayed on the <a href="{{ url_for('allotment_map') }}">allotment map</a> — matched to parcels in the Public Land Survey System (PLSS). The remaining <strong>46,025 patents</strong> are searchable on the <a href="{{ url_for('patents_index') }}">patents page</a> but cannot be shown on the map.</p>
+            <p>The gap exists because the map was built by joining patent records to PLSS polygon geometry. Patents that could not be matched to a physical parcel were excluded. The largest gaps are:</p>
+            <table class="table table-sm" style="max-width: 700px;">
+                <thead><tr><th>Category</th><th>Missing</th><th>Reason</th></tr></thead>
+                <tbody>
+                    <tr><td>Trust patents (AZ/NM)</td><td>~12,000</td><td>Navajo, Gila River, and Colorado River reservations use non-rectangular (metes-and-bounds) surveys outside the PLSS grid</td></tr>
+                    <tr><td>Serial Land Patents</td><td>~27,000</td><td>Patents with legal descriptions that did not match PLSS parcels — incomplete or non-standard township/range/section data</td></tr>
+                    <tr><td>State Land Patents</td><td>~14,000</td><td>Many in Alabama and Mississippi (Chickasaw/Choctaw removal-era), where tribal land surveys predate the rectangular system</td></tr>
+                    <tr><td>Other types</td><td>~4,000</td><td>Indian Allotment, Sioux Scrip, Chippewa Treaty, and miscellaneous document types</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Key implication:</strong> Arizona and New Mexico reservations are significantly underrepresented on the map. Navajo allotments in particular are almost entirely absent because the reservation's survey system is incompatible with PLSS. Similarly, southeastern removal-era patents (Alabama, Mississippi) are largely missing. Any analysis of national allotment patterns should account for this southwestern and southeastern gap.</p>
+            <p>The <a href="{{ url_for('patents_index') }}?mappable=no">patents page can be filtered</a> to show only the 46,025 non-mappable patents, or use the "Map Status" dropdown to see both together.</p>
+        </section>
+
         <section class="mb-5">
             <h2>Data Sources</h2>
             <ul>

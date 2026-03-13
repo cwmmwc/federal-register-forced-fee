@@ -219,6 +219,7 @@
             <a href="{{ url_for('home') }}">Research</a>
             <a href="{{ url_for('claims_search') }}">Claims</a>
             <a href="{{ url_for('patents_index') }}">Patents</a>
+            <a href="{{ url_for('allotment_map') }}">Map</a>
             <a href="{{ url_for('about') }}">About</a>
             <a href="https://land-sales.iath.virginia.edu/" target="_blank">Main Site</a>
         </nav>
@@ -264,7 +265,13 @@
         <div class="doc-card">
             <a href="{{ url_for('patents_index') }}">
                 <div class="doc-card-title">BLM Patents</div>
-                <div class="doc-card-desc">239,845 allotment patent records, 1854-1960s</div>
+                <div class="doc-card-desc">285,870 allotment patent records, 1854-1960s</div>
+            </a>
+        </div>
+        <div class="doc-card">
+            <a href="{{ url_for('allotment_map') }}">
+                <div class="doc-card-title">Allotment Map</div>
+                <div class="doc-card-desc">239,845 patents mapped to PLSS parcels across all reservations</div>
             </a>
         </div>
         <div class="doc-card">

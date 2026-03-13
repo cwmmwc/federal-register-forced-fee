@@ -35,6 +35,9 @@ Single-file Flask app (`app.py`) with Jinja2 templates. No ORM — raw SQL with 
 - `/patents/timeline` — Stacked bar chart (fee vs trust, forced fee toggle)
 - `/api/patents/timeline` — JSON API for timeline
 
+**Map (integrated Leaflet SPA):**
+- `/map` — Interactive allotment patent map (Leaflet + Esri Feature Service, standalone template)
+
 **Other pages:**
 - `/tribes` — Tribe list with claim counts
 - `/tribe/<slug>` — Individual tribe page with timeline
@@ -76,7 +79,8 @@ When showing forced fee data:
 - Never conflate FR claims with the total number of trust-to-fee conversions
 
 ## Templates
-All extend `base.html`. Navigation: Claims | Patents | Tribes | Timeline (dropdown) | About | Main Site.
+Most extend `base.html`. Navigation: Claims | Patents | Map | Tribes | Visualizations (dropdown) | About | Main Site.
+Exception: `map.html` is standalone (does not extend `base.html`) — it has its own thin nav bar and full-viewport layout for the Leaflet map SPA. Map assets live in `static/map/js/` and `static/map/css/`.
 
 ## Patterns to Follow
 - Server-side DataTables: route returns page HTML, `/api/` route returns JSON with draw/recordsTotal/recordsFiltered/data
@@ -84,8 +88,7 @@ All extend `base.html`. Navigation: Claims | Patents | Tribes | Timeline (dropdo
 - CSV export: same filters as search, streamed via `io.StringIO`
 - Tribe slugs: `slugify()` / `unslugify_tribe()` in app.py
 - GLO links: `glo_url(accession, doc_class)` builds glorecords.blm.gov URLs
-- Allotment map: configured via `ALLOTMENT_MAP_URL` env var (default http://localhost:8000)
+- Allotment map: integrated at `/map` route, cross-linked with `url_for('allotment_map', tribe=..., accession=...)`
 
 ## Environment
-- Map viewer: separate app at `ALLOTMENT_MAP_URL` (default localhost:8000)
 - Main site: https://land-sales.iath.virginia.edu/

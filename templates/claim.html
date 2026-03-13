@@ -20,9 +20,9 @@
         Allotment {{ claim.allotment_number }}
         &middot;
         {% if patents and patents[0].patents_accession_number %}
-        <a href="{{ allotment_map_url }}?tribe={{ claim.tribe_identified|urlencode }}&accession={{ patents[0].patents_accession_number|urlencode }}" target="_blank" class="small">View on Map</a>
+        <a href="{{ url_for('allotment_map', tribe=claim.tribe_identified, accession=patents[0].patents_accession_number) }}" class="small">View on Map</a>
         {% else %}
-        <a href="{{ allotment_map_url }}?tribe={{ claim.tribe_identified|urlencode }}" target="_blank" class="small">View on Map</a>
+        <a href="{{ url_for('allotment_map', tribe=claim.tribe_identified) }}" class="small">View on Map</a>
         {% endif %}
     </p>
 </div>

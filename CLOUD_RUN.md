@@ -86,7 +86,6 @@ gcloud storage rm -r gs://allotment-db-import-tmp
 ## Environment Variables
 Set on the Cloud Run service:
 - `DATABASE_URL` — Cloud SQL connection string (via Unix socket)
-- `ALLOTMENT_MAP_URL` — URL of the allotment map app
 
 Update env vars:
 ```bash

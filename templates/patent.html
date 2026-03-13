@@ -22,7 +22,7 @@
         Allotment {{ patent.indian_allotment_number or '—' }}
         {% if patent.centroid_lat and patent.centroid_lon %}
         &middot;
-        <a href="{{ allotment_map_url }}?tribe={{ patent.preferred_name|urlencode }}&accession={{ patent.accession_number|urlencode }}" target="_blank" class="small">View on Map</a>
+        <a href="{{ url_for('allotment_map', tribe=patent.preferred_name, accession=patent.accession_number) }}" class="small">View on Map</a>
         {% endif %}
     </p>
 </div>

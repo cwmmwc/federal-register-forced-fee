@@ -18,8 +18,6 @@ steps:
       - 'lunar-mercury-397321:us-east1:allotment-db'
       - '--set-env-vars'
       - 'DATABASE_URL=host=/cloudsql/lunar-mercury-397321:us-east1:allotment-db dbname=allotment_research user=appuser password=allotment-app-2026'
-      - '--set-env-vars'
-      - 'ALLOTMENT_MAP_URL=https://allotment-map-996830241007.us-east1.run.app'
       - '--memory'
       - '512Mi'
 timeout: '1200s'
